@@ -1,5 +1,5 @@
 use super::component::*;
 
-pub trait Entity{
-    fn add_component<'a, C: Component, CS: ComponentStorage<'a, C>>(&mut self, comp: C, comp_storage: &mut CS);
+pub trait EntityCommon{
+    fn add_component<C: Component, CS: ComponentStorage<C>>(&mut self, comp: C, comp_storage: &mut CS);
 }

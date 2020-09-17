@@ -1,13 +1,20 @@
 use super::entity::*;
 
-pub trait ComponentStorage<'cs, T>{
-    fn get<E: Entity>(&self, entity: E) -> Option<&'cs T>;
+pub trait ComponentStorage<T: Component>{
+    type Entity: EntityCommon;
 
-    fn get_mut<E: Entity>(&mut self, entity: E) -> Option<&'cs mut T>;
+    fn get<'cs>(&'cs self, entity: &Self::Entity) -> Option<&'cs T>;
 
-    fn iter(&self) -> dyn Iterator<Item = Option<&'cs T>>;
+    fn get_mut<'cs>(&'cs mut self, entity: &Self::Entity) -> Option<&'cs mut T>;
 
-    fn iter_mut(&mut self) -> dyn Iterator<Item = Option<&'cs mut T>>;
+    fn iter<'cs>(&'cs self) -> Box<(dyn Iterator<Item = &'cs T> + 'cs)>;
+
+    fn iter_mut<'cs>(&'cs mut self) -> Box<(dyn Iterator<Item = &'cs mut T> + 'cs)>;
+    
+    fn set<'cs>(&'cs mut self, entity: &Self::Entity, comp: T);
 }
 
-pub trait Component{}
+pub trait Component: Sized + Copy + Clone + Send + Sync{}
+
+impl<T> Component for T
+    where T: Sized + Copy + Clone + Send + Sync{}
