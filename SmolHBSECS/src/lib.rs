@@ -86,5 +86,6 @@ mod test{
         for (n, i) in storage.iter().enumerate(){
             assert_eq!(n, *i);
         }
+        println!("Pee pee poo poo");
     }
 }
