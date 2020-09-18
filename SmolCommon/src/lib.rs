@@ -1,10 +1,14 @@
 pub mod entity;
 pub mod component;
 
-pub trait World<'w>{
-    fn get<T>(&self) -> &'w dyn Resource<T>;
+use std::any::Any;
 
-    fn get_mut<T>(&mut self) -> &'w mut dyn Resource<T>;
+pub trait WorldCommon{
+    fn get<'w, T: Any>(&'w self) -> &'w dyn Resource;
+
+    fn get_mut<'w, T: Any>(&'w mut self) -> &'w mut dyn Resource;
+
+    fn insert<'w, R: 'static + Resource>(&'w mut self, resource: R);
 }
 
 pub trait Scheduler{
@@ -23,4 +27,6 @@ pub trait System{
     fn run(&mut self, resources: Self::SystemData);
 }
 
-pub trait Resource<T>{}
+pub trait Resource{}
+
+impl<T: Any> Resource for T{}

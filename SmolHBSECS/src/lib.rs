@@ -1,4 +1,5 @@
 pub mod component;
+pub mod world;
 
 use SmolCommon::entity::*;
 use SmolCommon::component::*;
@@ -19,16 +20,18 @@ impl PartialEq for Entity {
 }
 impl Eq for Entity {}
 
-struct EntityStorage{
+struct EntityStorage<'w>{
     entities: Vec<Entity>,
     empties: VecDeque<Entity>,
+    world: &'w world::World,
 }
 
-impl EntityStorage{
-    pub fn new() -> Self{
+impl<'w> EntityStorage<'w>{
+    pub fn new(world: &'w world::World) -> Self{
         EntityStorage{
             entities: Vec::new(),
             empties: VecDeque::new(),
+            world,
         }
     }
 
@@ -49,3 +52,4 @@ impl EntityStorage{
         self.empties.push_back(entity.clone());
     }
 }
+
