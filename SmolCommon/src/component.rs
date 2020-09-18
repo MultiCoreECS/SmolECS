@@ -11,9 +11,9 @@ pub trait ComponentStorage<T: Component>{
 
     fn iter_mut<'cs>(&'cs mut self) -> Box<(dyn Iterator<Item = &'cs mut T> + 'cs)>;
     
-    fn set<'cs>(&'cs mut self, entity: &Self::Entity, comp: T);
+    fn set(&mut self, entity: &Self::Entity, comp: T);
 
-    fn delete<'cs>(&'cs mut self, entity: &Self::Entity);
+    fn delete(&mut self, entity: &Self::Entity);
 }
 
 pub trait Component: Sized + Copy + Clone + Send + Sync{}

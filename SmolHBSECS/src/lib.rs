@@ -6,7 +6,7 @@ use SmolCommon::component::*;
 use std::collections::VecDeque;
 
 #[derive(Clone)]
-struct Entity{
+pub struct Entity{
     index: usize,
     generation: usize,
 }

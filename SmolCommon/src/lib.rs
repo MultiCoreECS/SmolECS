@@ -4,11 +4,11 @@ pub mod component;
 use std::any::Any;
 
 pub trait WorldCommon{
-    fn get<'w, T: Any>(&'w self) -> &'w dyn Resource;
+    fn get<'w, T: Any>(&'w self) -> &'w T;
 
-    fn get_mut<'w, T: Any>(&'w mut self) -> &'w mut dyn Resource;
+    fn get_mut<'w, T: Any>(&'w mut self) -> &'w mut T;
 
-    fn insert<'w, R: 'static + Resource>(&'w mut self, resource: R);
+    fn insert<'w, R: 'static + Any>(&'w mut self, resource: R);
 }
 
 pub trait Scheduler{

@@ -4,7 +4,7 @@ use bit_vec::BitVec;
 use std::iter::FilterMap;
 
 /// Stores components as a normal vector
-struct VecStorage<T>{
+pub struct VecStorage<T>{
     storage: Vec<Option<T>>,
     valid: BitVec,
 }
