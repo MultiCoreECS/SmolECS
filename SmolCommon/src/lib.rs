@@ -1,32 +1,25 @@
 pub mod entity;
 pub mod component;
-
+pub mod system;
 use std::any::Any;
 
+use std::cell::{RefCell, Ref, RefMut};
+use component::{ComponentStorage, Component};
+
 pub trait WorldCommon{
-    fn get<'w, T: Any>(&'w self) -> &'w T;
+    fn get<T: Any>(&self) -> Ref<T>;
 
-    fn get_mut<'w, T: Any>(&'w mut self) -> &'w mut T;
+    fn get_mut<T: Any>(&mut self) -> RefMut<T>;
 
-    fn insert<'w, R: 'static + Any>(&'w mut self, resource: R);
-}
+    fn insert<R: 'static + Any>(&mut self, resource: R);
+    
+    fn get_comp<T: Any>(&self) -> Ref<ComponentStorage<T>>;
 
-pub trait Scheduler{
-    fn new() -> Self;
+    fn get_mut_comp<T: Any>(&mut self) -> RefMut<ComponentStorage<T>>;
 
-    fn add<S: System>(&mut self, system: S);
-
-    fn schedule(&self) -> dyn FnOnce() -> ();
-}
-
-pub trait System{
-    type SystemData;
-
-    fn init(&mut self, resources: Self::SystemData);
-
-    fn run(&mut self, resources: Self::SystemData);
+    fn register_comp<T: 'static + Component + Any>(&mut self);
 }
 
 pub trait Resource{}
 
-impl<T: Any> Resource for T{}
+impl<T: Any + Send + Sync> Resource for T{}
