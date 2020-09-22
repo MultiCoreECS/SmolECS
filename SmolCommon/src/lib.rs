@@ -15,7 +15,7 @@ pub trait WorldCommon{
     
     fn get_comp<T: Any>(&self) -> Ref<ComponentStorage<T>>;
 
-    fn get_mut_comp<T: Any>(&mut self) -> RefMut<ComponentStorage<T>>;
+    fn get_comp_mut<T: Any>(&mut self) -> RefMut<ComponentStorage<T>>;
 
     fn register_comp<T: 'static + Component + Any>(&mut self);
 }
