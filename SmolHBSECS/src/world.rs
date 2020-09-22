@@ -34,15 +34,17 @@ impl WorldCommon for World{
         self.resources.insert(TypeId::of::<R>(), RefCell::new(Box::new(resource)));
     }
 
-    fn get_comp<T: 'static>(&self) -> Ref<ComponentStorage<T>>{
-        todo!();
+    fn get_comp<T: Component + 'static>(&self) -> Ref<ComponentStorage<T>>{
+        Ref::map(self.components.get(&TypeId::of::<T>()).unwrap().borrow(),
+            |r| r.downcast_ref::<VecStorage<T>>().unwrap())
     }
 
-    fn get_comp_mut<T: 'static>(&mut self) -> RefMut<ComponentStorage<T>>{
-        todo!();
+    fn get_comp_mut<T: Component + 'static>(&mut self) -> RefMut<ComponentStorage<T>>{
+        RefMut::map(self.components.get_mut(&TypeId::of::<T>()).unwrap().borrow_mut(),
+            |r| r.downcast_mut::<VecStorage<T>>().unwrap())
     }
 
-    fn register_comp<T: 'static>(&mut self){
+    fn register_comp<T: Component + 'static>(&mut self){
         self.components.insert(TypeId::of::<T>(), RefCell::new(Box::new(VecStorage::<T>::new())));
     }
 }
@@ -58,15 +60,13 @@ mod tests{
     #[test]
     fn create_world_add_component_storage(){
         let mut world = World::new();
-        let mut storage = VecStorage::<usize>::new();
-
-        world.insert(storage);
+        world.register_comp::<usize>();
 
         for i in 0..10{
-            world.get_mut::<VecStorage<usize>>().set(&i, i);
+            world.get_comp_mut::<usize>().set(&i, i);
         }
 
-        for (n, i) in world.get::<VecStorage<usize>>().iter().enumerate(){
+        for (n, i) in world.get_comp::<usize>().iter().enumerate(){
             assert_eq!(n, *i);
         }
     }

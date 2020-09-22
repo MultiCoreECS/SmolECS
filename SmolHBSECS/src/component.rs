@@ -75,7 +75,7 @@ mod test{
 
         for i in 0..10{
             let e = Entity{index: i, generation: 0};
-            storage.set(&e, i);
+            storage.set(&e.index, i);
         }
 
         for (n, i) in storage.iter().enumerate(){
@@ -89,10 +89,10 @@ mod test{
 
         for i in 0..10{
             let e = Entity{index: i, generation: 0};
-            storage.set(&e, i);
+            storage.set(&e.index, i);
         }
 
-        storage.delete(&Entity{index: 0, generation: 0});
+        storage.delete(&Entity{index: 0, generation: 0}.index);
 
         for (n, i) in storage.iter_mut().enumerate(){
             assert_eq!(n + 1, *i);
