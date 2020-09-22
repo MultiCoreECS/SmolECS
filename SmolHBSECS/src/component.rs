@@ -19,15 +19,14 @@ impl<T> VecStorage<T>{
 }
 
 impl<T: Component> ComponentStorage<T> for VecStorage<T>{
-    type Entity = Entity;
 
     /// Gets a reference to a component at the given index (entity)
-    fn get<'cs>(&'cs self, entity: &Self::Entity) -> Option<&'cs T>{
+    fn get<'cs>(&'cs self, entity: &usize) -> Option<&'cs T>{
         todo!()
     }
 
     /// Gets a mutable reference to a component at the given index (entity)
-    fn get_mut<'cs>(&'cs mut self, entity: &Self::Entity) -> Option<&'cs mut T>{
+    fn get_mut<'cs>(&'cs mut self, entity: &usize) -> Option<&'cs mut T>{
         todo!()
     }
 
@@ -48,20 +47,20 @@ impl<T: Component> ComponentStorage<T> for VecStorage<T>{
     }
 
     /// Puts a component at the given index, can also append new components
-    fn set<'cs>(&'cs mut self, entity: &Self::Entity, comp: T){
+    fn set<'cs>(&'cs mut self, entity: &usize, comp: T){
         // This is bad, but should almost never happen
-        while entity.index >= self.storage.len(){
+        while *entity >= self.storage.len(){
             self.storage.push(None);
             self.valid.push(false);
         }
-        *self.storage.get_mut(entity.index).unwrap() = Some(comp);
-        self.valid.set(entity.index, true);
+        *self.storage.get_mut(*entity).unwrap() = Some(comp);
+        self.valid.set(*entity, true);
     }
 
-    fn delete<'cs>(&'cs mut self, entity: &Self::Entity){
-        if entity.index < self.storage.len(){
-            *self.storage.get_mut(entity.index).unwrap() = None;
-            self.valid.set(entity.index, false);
+    fn delete<'cs>(&'cs mut self, entity: &usize){
+        if *entity < self.storage.len(){
+            *self.storage.get_mut(*entity).unwrap() = None;
+            self.valid.set(*entity, false);
         }
     }
 }

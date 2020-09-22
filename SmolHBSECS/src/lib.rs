@@ -1,5 +1,6 @@
 pub mod component;
 pub mod world;
+pub mod system;
 
 use SmolCommon::entity::*;
 use SmolCommon::component::*;
