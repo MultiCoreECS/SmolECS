@@ -28,7 +28,7 @@ pub trait System<'w>{
 }
 
 pub trait SystemData<'w>{
-    fn get_data<W: WorldCommon>(world: &'w mut W) -> Self;
+    fn get_data<W: WorldCommon>(world: &'w W) -> Self;
 }
 
 pub struct ReadComp<'w, T: Component>{
@@ -43,7 +43,7 @@ impl<'w, T: Component> ReadComp<'w, T>{
 
 impl<'w, T> SystemData<'w> for ReadComp<'w, T>
     where T: Component + 'static{
-    fn get_data<W: WorldCommon>(world: &'w mut W) -> Self{
+    fn get_data<W: WorldCommon>(world: &'w W) -> Self{
         Self{
             comp: world.get_comp::<T>()
         }
@@ -81,7 +81,7 @@ impl<'w, T: Component> WriteComp<'w, T>{
 
 impl<'w, T> SystemData<'w> for WriteComp<'w, T>
     where T: Component + 'static{
-    fn get_data<W: WorldCommon>(world: &'w mut W) -> Self{
+    fn get_data<W: WorldCommon>(world: &'w W) -> Self{
         Self{
             comp: world.get_comp_mut::<T>()
         }
@@ -113,7 +113,7 @@ impl<'w, T: Resource> Deref for Read<'w, T>{
 
 impl<'w, T> SystemData<'w> for Read<'w, T>
     where T: Resource + 'static{
-    fn get_data<W: WorldCommon>(world: &'w mut W) -> Self{
+    fn get_data<W: WorldCommon>(world: &'w W) -> Self{
         Self{
             comp: world.get::<T>()
         }
@@ -140,7 +140,7 @@ impl<'w, T: Resource> DerefMut for Write<'w, T>{
 
 impl<'w, T> SystemData<'w> for Write<'w, T>
     where T: Resource + 'static{
-    fn get_data<W: WorldCommon>(world: &'w mut W) -> Self{
+    fn get_data<W: WorldCommon>(world: &'w W) -> Self{
         Self{
             comp: world.get_mut::<T>()
         }

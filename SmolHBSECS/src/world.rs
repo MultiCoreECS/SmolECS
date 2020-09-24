@@ -25,8 +25,8 @@ impl WorldCommon for World{
             |r| r.downcast_ref::<T>().unwrap())
     }
 
-    fn get_mut<T: 'static>(&mut self) -> RefMut<T>{
-        RefMut::map(self.resources.get_mut(&TypeId::of::<T>()).unwrap().borrow_mut(),
+    fn get_mut<T: 'static>(&self) -> RefMut<T>{
+        RefMut::map(self.resources.get(&TypeId::of::<T>()).unwrap().borrow_mut(),
             |r| r.downcast_mut::<T>().unwrap())
     }
 
@@ -39,8 +39,8 @@ impl WorldCommon for World{
             |r| r.downcast_ref::<VecStorage<T>>().unwrap())
     }
 
-    fn get_comp_mut<T: Component + 'static>(&mut self) -> RefMut<ComponentStorage<T>>{
-        RefMut::map(self.components.get_mut(&TypeId::of::<T>()).unwrap().borrow_mut(),
+    fn get_comp_mut<T: Component + 'static>(&self) -> RefMut<ComponentStorage<T>>{
+        RefMut::map(self.components.get(&TypeId::of::<T>()).unwrap().borrow_mut(),
             |r| r.downcast_mut::<VecStorage<T>>().unwrap())
     }
 

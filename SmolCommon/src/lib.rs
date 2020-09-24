@@ -11,13 +11,13 @@ use system::Scheduler;
 pub trait WorldCommon{
     fn get<T: Any>(&self) -> Ref<T>;
 
-    fn get_mut<T: Any>(&mut self) -> RefMut<T>;
+    fn get_mut<T: Any>(&self) -> RefMut<T>;
 
     fn insert<R: 'static + Any>(&mut self, resource: R);
     
     fn get_comp<T: Component + Any>(&self) -> Ref<ComponentStorage<T>>;
 
-    fn get_comp_mut<T: Component + Any>(&mut self) -> RefMut<ComponentStorage<T>>;
+    fn get_comp_mut<T: Component + Any>(&self) -> RefMut<ComponentStorage<T>>;
 
     fn register_comp<T: 'static + Component + Any>(&mut self);
 }
