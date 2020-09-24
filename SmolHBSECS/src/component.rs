@@ -31,19 +31,19 @@ impl<T: Component> ComponentStorage<T> for VecStorage<T>{
     }
 
     /// Iterates over the valid components.
-    fn iter<'cs>(&'cs self) -> Box<(dyn Iterator<Item = &'cs T> + 'cs)>{
+    fn iter<'cs>(&'cs self) -> Box<(dyn Iterator<Item = (bool, Option<&'cs T>)> + 'cs)>{
         Box::new(
-            self.storage.iter()
-                .zip(self.valid.iter())
-                .filter_map(|(comp, v)| if v {Some(comp.as_ref().unwrap())} else {None}))
+            self.valid.iter()
+                .zip(self.storage.iter())
+                .map(|(v, comp)| (v, comp.as_ref())))
     }
 
     /// Mutabley iterates over the valid components.
-    fn iter_mut<'cs>(&'cs mut self) -> Box<(dyn Iterator<Item = &'cs mut T> + 'cs)>{
+    fn iter_mut<'cs>(&'cs mut self) -> Box<(dyn Iterator<Item = (bool, Option<&'cs mut T>)> + 'cs)>{
         Box::new(
-            self.storage.iter_mut()
-                .zip(self.valid.iter())
-                .filter_map(|(comp, v)| if v {Some(comp.as_mut().unwrap())} else {None}))
+            self.valid.iter()
+                .zip(self.storage.iter_mut())
+                .map(|(v, comp)| (v, comp.as_mut())))
     }
 
     /// Puts a component at the given index, can also append new components

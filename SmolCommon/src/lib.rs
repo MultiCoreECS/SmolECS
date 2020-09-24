@@ -1,6 +1,7 @@
 pub mod entity;
 pub mod component;
 pub mod system;
+pub mod join;
 use std::any::Any;
 
 use std::cell::{RefCell, Ref, RefMut};
