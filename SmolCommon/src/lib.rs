@@ -5,6 +5,7 @@ use std::any::Any;
 
 use std::cell::{RefCell, Ref, RefMut};
 use component::{ComponentStorage, Component};
+use system::Scheduler;
 
 pub trait WorldCommon{
     fn get<T: Any>(&self) -> Ref<T>;
@@ -13,9 +14,9 @@ pub trait WorldCommon{
 
     fn insert<R: 'static + Any>(&mut self, resource: R);
     
-    fn get_comp<T: Any>(&self) -> Ref<ComponentStorage<T>>;
+    fn get_comp<T: Component + Any>(&self) -> Ref<ComponentStorage<T>>;
 
-    fn get_comp_mut<T: Any>(&mut self) -> RefMut<ComponentStorage<T>>;
+    fn get_comp_mut<T: Component + Any>(&mut self) -> RefMut<ComponentStorage<T>>;
 
     fn register_comp<T: 'static + Component + Any>(&mut self);
 }
