@@ -22,12 +22,12 @@ impl<T: Component> ComponentStorage<T> for VecStorage<T>{
 
     /// Gets a reference to a component at the given index (entity)
     fn get<'cs>(&'cs self, entity: &usize) -> Option<&'cs T>{
-        todo!()
+        return self.storage.get(*entity).unwrap().as_ref();
     }
 
     /// Gets a mutable reference to a component at the given index (entity)
     fn get_mut<'cs>(&'cs mut self, entity: &usize) -> Option<&'cs mut T>{
-        todo!()
+        return self.storage.get_mut(*entity).unwrap().as_mut();
     }
 
     /// Iterates over the valid components.

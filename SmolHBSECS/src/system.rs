@@ -6,6 +6,7 @@ mod tests{
     use crate::world::World;
     use SmolCommon::WorldCommon;
     use SmolCommon::system::*;
+    use SmolCommon::join::Joinable;
 
     #[test]
     fn read(){
@@ -18,6 +19,7 @@ mod tests{
         assert_eq!(String::from("Hello, my name is James!"), *reader);
     }
 
+    #[test]
     fn write(){
         let mut world = World::new();
 
@@ -30,6 +32,85 @@ mod tests{
         assert_eq!(40, *writer);
     }
 
+    #[test]
+    fn read_comp(){
+        let mut world = World::new();
+
+        world.register_comp::<usize>();
+
+        for i in 0..10{
+            world.get_comp_mut::<usize>().set(&i, i);
+        }
+
+        let reader = ReadComp::<usize>::get_data(&world);
+
+        for i in 0..10{
+            assert_eq!(*reader.get(&i).unwrap(), i);
+        }
+
+        drop(reader);
+        
+        world.get_comp_mut::<usize>().delete(&2);
+        world.get_comp_mut::<usize>().delete(&8);
+
+        let reader = ReadComp::<usize>::get_data(&world);
+
+        for i in 0..10{
+            if i == 2 || i == 8{
+                continue;
+            }
+            assert_eq!(*reader.get(&i).unwrap(), i);
+        }
+
+        let mut check: Vec<usize> = (0..10).collect();
+        check.remove(8);
+        check.remove(2);
+        
+        for (l, r) in check.iter().zip(reader.join()){
+            assert_eq!(l, r);
+        }
+    }
+
+    #[test]
+    fn write_comp(){
+        let mut world = World::new();
+
+        world.register_comp::<usize>();
+
+        for i in 0..10{
+            world.get_comp_mut::<usize>().set(&i, i);
+        }
+
+        let reader = ReadComp::<usize>::get_data(&world);
+
+        for i in 0..10{
+            assert_eq!(*reader.get(&i).unwrap(), i);
+        }
+
+        drop(reader);
+        
+        world.get_comp_mut::<usize>().delete(&2);
+        world.get_comp_mut::<usize>().delete(&8);
+
+        let reader = ReadComp::<usize>::get_data(&world);
+
+        for i in 0..10{
+            if i == 2 || i == 8{
+                continue;
+            }
+            assert_eq!(*reader.get(&i).unwrap(), i);
+        }
+
+        let mut check: Vec<usize> = (0..10).collect();
+        check.remove(8);
+        check.remove(2);
+        
+        for (l, r) in check.iter().zip(reader.join()){
+            assert_eq!(l, r);
+        }
+    }
+
+    #[test]
     fn multiple_read_write(){
         
         let mut world = World::new();
