@@ -67,7 +67,11 @@ mod tests{
         }
 
         for (n, i) in world.get_comp::<usize>().iter().enumerate(){
-            assert_eq!(n, *i);
+            let (valid, num) = i;
+            let val = num.unwrap();
+            if valid{
+                assert_eq!(n, *val);
+            }
         }
     }
 }

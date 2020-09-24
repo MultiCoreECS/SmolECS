@@ -79,7 +79,8 @@ mod test{
         }
 
         for (n, i) in storage.iter().enumerate(){
-            assert_eq!(n, *i);
+            let (valid, num) = i;
+            assert_eq!(n, *num.unwrap());
         }
     }
 
@@ -95,12 +96,23 @@ mod test{
         storage.delete(&Entity{index: 0, generation: 0}.index);
 
         for (n, i) in storage.iter_mut().enumerate(){
-            assert_eq!(n + 1, *i);
-            *i *= 2;
+            let (valid, num) = i;
+            if n == 0{
+                assert_eq!(valid, false);
+                continue;
+            }
+            let reference = num.unwrap();
+            assert_eq!(n, *reference);
+            *reference *= 2;
         }
 
         for (n, i) in storage.iter().enumerate(){
-            assert_eq!((n + 1)* 2, *i);
+            let (valid, num) = i;
+            if n == 0{
+                assert_eq!(valid, false);
+                continue;
+            }
+            assert_eq!((n)* 2, *num.unwrap());
         }
     }
 }
