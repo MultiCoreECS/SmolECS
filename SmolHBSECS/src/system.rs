@@ -7,6 +7,7 @@ mod tests{
     use SmolCommon::WorldCommon;
     use SmolCommon::system::*;
     use SmolCommon::join::Joinable;
+    use std::convert::TryInto;
 
     #[test]
     fn read(){
@@ -68,6 +69,26 @@ mod tests{
         
         for (l, r) in check.iter().zip(reader.join()){
             assert_eq!(l, r);
+        }
+    }
+
+    #[test]
+    fn read_read_comp(){
+        let mut world = World::new();
+
+        world.register_comp::<usize>();
+        world.register_comp::<isize>();
+
+        for i in 0..10{
+            world.get_comp_mut::<usize>().set(&i, i);
+            world.get_comp_mut::<isize>().set(&i, -(i as isize));
+        }
+
+        let reader_usize = ReadComp::<usize>::get_data(&world);
+        let reader_isize = ReadComp::<isize>::get_data(&world);
+
+        for (u, i) in (&reader_usize, &reader_isize).join(){
+            assert_eq!(*u, (-i).try_into().unwrap());
         }
     }
 
