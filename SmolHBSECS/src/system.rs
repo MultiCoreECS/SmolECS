@@ -92,6 +92,31 @@ mod tests{
         }
     }
 
+
+    #[test]
+    fn read_read_read_comp(){
+        let mut world = World::new();
+
+        world.register_comp::<usize>();
+        world.register_comp::<isize>();
+        world.register_comp::<u8>();
+
+        for i in 0..10{
+            world.get_comp_mut::<usize>().set(&i, i);
+            world.get_comp_mut::<isize>().set(&i, -(i as isize));
+            world.get_comp_mut::<u8>().set(&i, i as u8);
+        }
+
+        let reader_usize = ReadComp::<usize>::get_data(&world);
+        let reader_isize = ReadComp::<isize>::get_data(&world);
+        let reader_u8 = ReadComp::<u8>::get_data(&world);
+
+        for (u, i, smol_u) in (&reader_usize, &reader_isize, &reader_u8).join(){
+            assert_eq!(*u, (-i).try_into().unwrap());
+            assert_eq!(*u, *smol_u as usize);
+        }
+    }
+
     #[test]
     fn write_comp(){
         let mut world = World::new();
