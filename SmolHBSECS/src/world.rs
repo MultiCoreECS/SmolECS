@@ -1,4 +1,4 @@
-use SmolCommon::{WorldCommon, Resource};
+use SmolCommon::{WorldCommon, Resource, DepVec, AccessType, BitVec};
 use SmolCommon::component::{Component, ComponentStorage};
 use std::collections::HashMap;
 use std::any::{Any, TypeId};
@@ -6,6 +6,8 @@ use std::cell::{RefCell, Ref, RefMut};
 use crate::component::VecStorage;
 
 pub struct World{
+    resource_ids: HashMap<TypeId, usize>,
+    component_ids: HashMap<TypeId, usize>,
     resources: HashMap<TypeId, RefCell<Box<dyn Any>>>,
     components: HashMap<TypeId, RefCell<Box<dyn Any>>>
 }
@@ -13,6 +15,8 @@ pub struct World{
 impl World{
     pub fn new() -> Self{
         World{
+            resource_ids: HashMap::new(),
+            component_ids: HashMap::new(),
             resources: HashMap::new(),
             components: HashMap::new()
         }
@@ -31,7 +35,9 @@ impl WorldCommon for World{
     }
 
     fn insert<R: 'static + Any>(&mut self, resource: R){
-        self.resources.insert(TypeId::of::<R>(), RefCell::new(Box::new(resource)));
+        let id = TypeId::of::<R>();
+        self.resource_ids.insert(id.clone(), self.resource_ids.len());
+        self.resources.insert(id, RefCell::new(Box::new(resource)));
     }
 
     fn get_comp<T: Component + 'static>(&self) -> Ref<ComponentStorage<T>>{
@@ -45,7 +51,51 @@ impl WorldCommon for World{
     }
 
     fn register_comp<T: Component + 'static>(&mut self){
-        self.components.insert(TypeId::of::<T>(), RefCell::new(Box::new(VecStorage::<T>::new())));
+        let id = TypeId::of::<T>();
+        self.component_ids.insert(id.clone(), self.component_ids.len());
+        self.components.insert(id, RefCell::new(Box::new(VecStorage::<T>::new())));
+    }
+    
+    fn get_dep_vec_res<T: Any>(&self, at: AccessType) -> DepVec{
+        let mut res = BitVec::from_elem(self.resource_ids.len(), false);
+        res.set(*self.resource_ids.get(&TypeId::of::<T>()).unwrap(), true);
+        match at{
+            AccessType::Read =>
+            DepVec{
+                comp_read: BitVec::new(),
+                comp_write: BitVec::new(),
+                res_read: res,
+                res_write: BitVec::new(),
+            },
+            AccessType::Write =>
+            DepVec{
+                comp_read: BitVec::new(),
+                comp_write: BitVec::new(),
+                res_write: res,
+                res_read: BitVec::new(),
+            },
+        }
+    }
+
+    fn get_dep_vec_comp<T: Any>(&self, at: AccessType) -> DepVec{
+        let mut comp = BitVec::from_elem(self.component_ids.len(), false);
+        comp.set(*self.component_ids.get(&TypeId::of::<T>()).unwrap(), true);
+        match at{
+            AccessType::Read =>
+            DepVec{
+                res_read: BitVec::new(),
+                res_write: BitVec::new(),
+                comp_read: comp,
+                comp_write: BitVec::new(),
+            },
+            AccessType::Write =>
+            DepVec{
+                res_read: BitVec::new(),
+                res_write: BitVec::new(),
+                comp_write: comp,
+                comp_read: BitVec::new(),
+            },
+        }
     }
 }
 

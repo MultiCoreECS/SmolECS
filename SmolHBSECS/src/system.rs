@@ -1,5 +1,93 @@
+use crate::world::World;
 use SmolCommon::system::*;
 use SmolCommon::component::Component;
+use SmolCommon::{DepVec, BitVec};
+use SmolCommon::{WorldCommon};
+use std::collections::HashMap;
+use rayon::spawn;
+
+// Stores systems as a tuple of dependencies, init funcs, and run funcs
+pub struct SystemScheduler<'w>{
+    systems: HashMap<String, StoredSys<'w>>,
+    max_threads: usize,
+}
+
+struct StoredSys<'w>{
+    dep: Vec<String>,
+    get_dep_vec: Box<dyn FnMut(&'w World) -> DepVec>,
+    init: Box<dyn FnMut(&'w World)>,
+    run: Box<dyn FnMut(&'w World)>,
+}
+
+impl<'w> SystemScheduler<'w>{
+    fn new(max_threads: usize) -> Self{
+        SystemScheduler{
+            systems: HashMap::new(),
+            max_threads
+        }
+    }
+}
+
+impl<'w> Scheduler<'w, World> for SystemScheduler<'w>{
+
+    fn add<S: System<'w>>(&mut self, name: String, dep: Vec<String>){
+        self.systems.insert(name, 
+            StoredSys{
+                dep,
+                get_dep_vec: Box::new(|world: &'w World| {S::get_system_dependencies(world)}),
+                init: Box::new(|world: &'w World| {S::init(S::get_system_data(world))}),
+                run: Box::new(|world: &'w World| {S::run(S::get_system_data(world))}),
+            });
+    }
+
+    fn run(&mut self, world: &'w World){
+
+        let mut systems_done: HashMap<String, bool> = self.systems.iter().map(|(key, value)| (key.clone(), false)).collect();
+        let mut dep_vecs: HashMap<String, DepVec> = self.systems.iter_mut().map(|(key, value)| (key.clone(), (value.get_dep_vec)(world))).collect();
+        let mut system_resources = DepVec{
+            res_read: BitVec::new(),
+            res_write: BitVec::new(),
+            comp_read: BitVec::new(),
+            comp_write: BitVec::new(),
+        };
+
+        loop{
+            
+        //Check if all systems are complete
+        for (sys, done) in systems_done.iter(){
+            if *done{
+                continue;
+            }
+
+            //When incomplete system found, check if it's dependencies are complete
+            let sys_dep = &self.systems.get(sys).unwrap().dep;
+            match sys_dep.iter().find(|dependency| *systems_done.get(*dependency).unwrap() == false){
+                
+                //If dependencies aren't complete, continue checking systems
+                Some(dependency) => continue,
+                _ => (),
+            };
+            
+            //If dependencies are complete, check if it's resources are available
+            let sys_res = dep_vecs.get(sys).unwrap();
+            
+            //If they aren't, continue checking systems
+
+            //If they are, check for an open thread
+            
+        }
+
+        
+
+
+
+        //If there is an open thread, send the system to it
+
+        //If there isn't, wait for an open thread
+        }
+        todo!();
+    }
+}
 
 #[cfg(test)]
 mod tests{
