@@ -5,7 +5,7 @@ use std::any::{Any, TypeId};
 use std::cell::{RefCell, Ref, RefMut};
 use crate::component::VecStorage;
 
-use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
+use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard, MappedRwLockReadGuard, MappedRwLockWriteGuard};
 use std::borrow::{Borrow, BorrowMut};
 
 pub struct World{
@@ -16,6 +16,7 @@ pub struct World{
 }
 
 unsafe impl Send for World{}
+unsafe impl Sync for World{}
 
 impl World{
     pub fn new() -> Self{
@@ -29,12 +30,14 @@ impl World{
 }
 
 impl WorldCommon for World{
-    fn get<T: 'static>(& self) -> &T{
-        self.resources.get(&TypeId::of::<T>()).unwrap().read().unwrap().borrow().downcast_ref::<T>().unwrap()
+    fn get<T: 'static>(& self) -> MappedRwLockReadGuard<T>{
+        RwLockReadGuard::map(self.resources.get(&TypeId::of::<T>()).unwrap().read(),
+            |any| any.downcast_ref::<T>().unwrap())
     }
 
-    fn get_mut<T: 'static>(&self) -> &mut T{
-        self.resources.get(&TypeId::of::<T>()).unwrap().write().unwrap().borrow_mut().downcast_mut::<T>().unwrap()
+    fn get_mut<T: 'static>(&self) -> MappedRwLockWriteGuard<T>{
+        RwLockWriteGuard::map(self.resources.get(&TypeId::of::<T>()).unwrap().write(),
+            |any| any.downcast_mut::<T>().unwrap())
     }
 
     fn insert<R: 'static + Any>(&mut self, resource: R){
@@ -43,12 +46,14 @@ impl WorldCommon for World{
         self.resources.insert(id, RwLock::new(Box::new(resource)));
     }
 
-    fn get_comp<T: Component + 'static>(&self) -> &ComponentStorage<T>{
-        self.components.get(&TypeId::of::<T>()).unwrap().read().unwrap().borrow().downcast_ref::<VecStorage<T>>().unwrap()
+    fn get_comp<T: Component + 'static>(&self) -> MappedRwLockReadGuard<ComponentStorage<T>>{
+        RwLockReadGuard::map(self.components.get(&TypeId::of::<T>()).unwrap().read(),
+            |any| any.downcast_ref::<VecStorage<T>>().unwrap() as &ComponentStorage<T>)
     }
 
-    fn get_comp_mut<T: Component + 'static>(&self) -> &mut ComponentStorage<T>{
-        self.components.get(&TypeId::of::<T>()).unwrap().write().unwrap().borrow_mut().downcast_mut::<VecStorage<T>>().unwrap()
+    fn get_comp_mut<T: Component + 'static>(&self) -> MappedRwLockWriteGuard<ComponentStorage<T>>{
+        RwLockWriteGuard::map(self.components.get(&TypeId::of::<T>()).unwrap().write(),
+            |any| any.downcast_mut::<VecStorage<T>>().unwrap() as &mut ComponentStorage<T>)
     }
 
     fn register_comp<T: Component + 'static>(&mut self){

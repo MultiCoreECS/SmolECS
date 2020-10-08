@@ -6,6 +6,7 @@ use SmolCommon::{WorldCommon};
 use std::sync::{Arc, Mutex, atomic::{Ordering, AtomicBool}};
 use std::collections::HashMap;
 use rayon;
+use std::ops::Deref;
 
 // Stores systems as a tuple of dependencies, init funcs, and run funcs
 pub struct SystemScheduler<'w>{
@@ -16,21 +17,15 @@ pub struct SystemScheduler<'w>{
 struct StoredSys<'w>{
     dep: Vec<String>,
     get_dep_vec: Box<dyn Fn(&'w World) -> DepVec>,
-    run: Run<'w>,
+    run: Arc<Run>,
 }
 
-struct Run<'w>{
-    run: Box<dyn Fn(&'w World)>,
+struct Run{
+    function: Box<dyn Fn(&'static World)>,
 }
 
-impl<'w> Run<'w>{
-    fn run(&self, world: &'w World){
-        self.run(world)
-    }
-}
-
-unsafe impl<'w> Send for Run<'w>{}
-unsafe impl<'w> Sync for Run<'w>{}
+unsafe impl Send for Run{}
+unsafe impl Sync for Run{}
 
 impl<'w> SystemScheduler<'w>{
     fn new(max_threads: usize) -> Self{
@@ -48,63 +43,79 @@ impl<'w> Scheduler<'w, World> for SystemScheduler<'w>{
             StoredSys{
                 dep,
                 get_dep_vec: Box::new(|world: &'w World| {S::get_system_dependencies(world)}),
-                run: Run{run: Box::new(|world: &'w World| {S::run(S::get_system_data(world))})},
+                run: Arc::new(Run{function: Box::new(|world: &'static World| {S::run(S::get_system_data(world))})}),
             });
     }
 
-    fn run(&mut self, world: &'w World){
+    fn run(&mut self, world: &'static World){
 
-        let mut systems_done: HashMap<String, AtomicBool> = self.systems.iter().map(|(key, value)| (key.clone(), AtomicBool::from(false))).collect();
-        let mut dep_vecs: HashMap<String, DepVec> = self.systems.iter_mut().map(|(key, value)| (key.clone(), (value.get_dep_vec)(world))).collect();
-        let mut in_use_resources: Arc<Mutex<Vec<DepVec>>> = Arc::new(Mutex::new(Vec::new()));
+        let systems_done: HashMap<String, Arc<AtomicBool>> = self.systems.iter().map(|(key, value)| (key.clone(), Arc::new(AtomicBool::from(false)))).collect();
+        let dep_vecs: HashMap<String, DepVec> = self.systems.iter_mut().map(|(key, value)| (key.clone(), (value.get_dep_vec)(&world))).collect();
+        let mut in_use_resources: Arc<Mutex<HashMap<String, DepVec>>> = Arc::new(Mutex::new(HashMap::new()));
         
         let mut all_systems_done = false;
 
         while !all_systems_done{
-            
-        //Check if all systems are complete
-        for (sys, done) in systems_done.iter(){
-            if done.load(Ordering::Relaxed){
-                continue;
-            }
 
-            //When incomplete system found, check if it's dependencies are complete
-            let sys_dep = &self.systems.get(sys).unwrap().dep;
-            match sys_dep.iter().find(|dependency| systems_done.get(*dependency).unwrap().load(Ordering::Relaxed) == false){
+            let mut in_use_clone = None;
+            let mut run_fn = None;
+            let mut world_clone = None;
+            let mut done_clone = None;
+            let mut sys_clone = None;
+
+            let mut systems_done_check = true;
+
+            //Check if all systems are complete
+            for (sys, done) in systems_done.iter(){
+                if done.load(Ordering::Relaxed){
+                    continue;
+                }
+
+                systems_done_check = false;
+
+                //When incomplete system found, check if it's dependencies are complete
+                let sys_dep = &self.systems.get(sys).unwrap().dep;
+                match sys_dep.iter().find(|dependency| systems_done.get(*dependency).unwrap().load(Ordering::Relaxed) == false){
+                    
+                    //If dependencies aren't complete, continue checking systems
+                    Some(dependency) => continue,
+                    _ => (),
+                };
                 
-                //If dependencies aren't complete, continue checking systems
-                Some(dependency) => continue,
-                _ => (),
-            };
-            
-            //If dependencies are complete, check if it's resources are available
-            let sys_res = dep_vecs.get(sys).unwrap();
-            
-            //If they aren't, continue checking systems
-            if in_use_resources.lock().unwrap().iter().find(|dep| dep.intersection(sys_res.res_write.clone(), sys_res.comp_write.clone())).is_some(){
-                continue;
+                //If dependencies are complete, check if it's resources are available
+                let sys_res = dep_vecs.get(sys).unwrap();
+                
+                //If they aren't, continue checking systems
+                if in_use_resources.lock().unwrap().iter().find(|(d_sys, dep)| dep.intersection(sys_res.res_write.clone(), sys_res.comp_write.clone())).is_some(){
+                    continue;
+                }
+                
+                in_use_resources.lock().unwrap().insert(sys.clone(), sys_res.clone());
+
+                in_use_clone = Some(in_use_resources.clone());
+                run_fn = Some(self.systems.get(sys).unwrap().run.clone());
+                world_clone = Some(world.clone());
+                done_clone = Some(done.clone());
+                sys_clone = Some(sys.clone());
+                break;
             }
             
-            in_use_resources.lock().unwrap().push(sys_res.clone());
+            if in_use_clone.is_some() && run_fn.is_some() && world_clone.is_some() && done_clone.is_some() && sys_clone.is_some(){
+                let in_use_clone = in_use_clone.unwrap();
+                let run_fn = run_fn.unwrap();
+                let world_clone = world_clone.unwrap();
+                let done_clone = done_clone.unwrap();
+                let sys_clone = sys_clone.unwrap();
+    
+                rayon::spawn(move ||{
+                    (run_fn.function)(&world_clone);
+                    in_use_clone.lock().unwrap().remove(&sys_clone);
+                    done_clone.store(true, Ordering::Relaxed);
+                });
+            }
 
-            let in_use_clone = in_use_resources.clone();
-            
-            let run = self.systems.get(sys).unwrap().run;
-            rayon::spawn(||{
-                run.run(world)
-            });
-
+            all_systems_done = systems_done_check;
         }
-
-        
-
-
-
-        //If there is an open thread, send the system to it
-
-        //If there isn't, wait for an open thread
-        }
-        todo!();
     }
 }
 
