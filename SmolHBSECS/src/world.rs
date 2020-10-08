@@ -5,12 +5,17 @@ use std::any::{Any, TypeId};
 use std::cell::{RefCell, Ref, RefMut};
 use crate::component::VecStorage;
 
+use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::borrow::{Borrow, BorrowMut};
+
 pub struct World{
     resource_ids: HashMap<TypeId, usize>,
     component_ids: HashMap<TypeId, usize>,
-    resources: HashMap<TypeId, RefCell<Box<dyn Any>>>,
-    components: HashMap<TypeId, RefCell<Box<dyn Any>>>
+    resources: HashMap<TypeId, RwLock<Box<dyn Any>>>,
+    components: HashMap<TypeId, RwLock<Box<dyn Any>>>
 }
+
+unsafe impl Send for World{}
 
 impl World{
     pub fn new() -> Self{
@@ -24,36 +29,32 @@ impl World{
 }
 
 impl WorldCommon for World{
-    fn get<T: 'static>(& self) -> Ref<T>{
-        Ref::map(self.resources.get(&TypeId::of::<T>()).unwrap().borrow(), 
-            |r| r.downcast_ref::<T>().unwrap())
+    fn get<T: 'static>(& self) -> &T{
+        self.resources.get(&TypeId::of::<T>()).unwrap().read().unwrap().borrow().downcast_ref::<T>().unwrap()
     }
 
-    fn get_mut<T: 'static>(&self) -> RefMut<T>{
-        RefMut::map(self.resources.get(&TypeId::of::<T>()).unwrap().borrow_mut(),
-            |r| r.downcast_mut::<T>().unwrap())
+    fn get_mut<T: 'static>(&self) -> &mut T{
+        self.resources.get(&TypeId::of::<T>()).unwrap().write().unwrap().borrow_mut().downcast_mut::<T>().unwrap()
     }
 
     fn insert<R: 'static + Any>(&mut self, resource: R){
         let id = TypeId::of::<R>();
         self.resource_ids.insert(id.clone(), self.resource_ids.len());
-        self.resources.insert(id, RefCell::new(Box::new(resource)));
+        self.resources.insert(id, RwLock::new(Box::new(resource)));
     }
 
-    fn get_comp<T: Component + 'static>(&self) -> Ref<ComponentStorage<T>>{
-        Ref::map(self.components.get(&TypeId::of::<T>()).unwrap().borrow(),
-            |r| r.downcast_ref::<VecStorage<T>>().unwrap())
+    fn get_comp<T: Component + 'static>(&self) -> &ComponentStorage<T>{
+        self.components.get(&TypeId::of::<T>()).unwrap().read().unwrap().borrow().downcast_ref::<VecStorage<T>>().unwrap()
     }
 
-    fn get_comp_mut<T: Component + 'static>(&self) -> RefMut<ComponentStorage<T>>{
-        RefMut::map(self.components.get(&TypeId::of::<T>()).unwrap().borrow_mut(),
-            |r| r.downcast_mut::<VecStorage<T>>().unwrap())
+    fn get_comp_mut<T: Component + 'static>(&self) -> &mut ComponentStorage<T>{
+        self.components.get(&TypeId::of::<T>()).unwrap().write().unwrap().borrow_mut().downcast_mut::<VecStorage<T>>().unwrap()
     }
 
     fn register_comp<T: Component + 'static>(&mut self){
         let id = TypeId::of::<T>();
         self.component_ids.insert(id.clone(), self.component_ids.len());
-        self.components.insert(id, RefCell::new(Box::new(VecStorage::<T>::new())));
+        self.components.insert(id, RwLock::new(Box::new(VecStorage::<T>::new())));
     }
     
     fn get_dep_vec_res<T: Any>(&self, at: AccessType) -> DepVec{
