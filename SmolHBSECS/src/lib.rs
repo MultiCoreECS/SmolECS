@@ -4,6 +4,8 @@ pub mod system;
 
 use SmolCommon::entity::*;
 use SmolCommon::component::*;
+use SmolCommon::system::WriteComp;
+use SmolCommon::join::{JoinIter, Joinable};
 use std::collections::VecDeque;
 
 #[derive(Clone)]
@@ -12,7 +14,17 @@ pub struct Entity{
     generation: usize,
 }
 
-impl EntityCommon for Entity{}
+impl EntityCommon for Entity{
+
+    fn add<'d, T: Component>(&'d self, storage: &'d mut WriteComp<'d, T>, comp: T){
+        let index = self.index;
+        storage.set(&index, comp);
+    }
+
+    fn remove<'d, T: Component>(&'d self, storage: &'d mut WriteComp<'d, T>){
+        storage.delete(&(self.index.clone()));
+    }
+}
 
 impl PartialEq for Entity {
     fn eq(&self, other: &Self) -> bool {
@@ -36,7 +48,7 @@ impl<'w> EntityStorage<'w>{
         }
     }
 
-    fn create_entity(&mut self) -> &Entity{
+    pub fn create_entity(&mut self) -> &Entity{
         match self.empties.pop_front(){
             Some(mut entity) => {
                 self.entities.get(entity.index).unwrap()
@@ -48,9 +60,21 @@ impl<'w> EntityStorage<'w>{
         }
     }
 
-    fn delete_entity(&mut self, entity: &Entity){
+    pub fn delete_entity(&mut self, entity: &Entity){
         self.entities[entity.index].generation += 1;
         self.empties.push_back(entity.clone());
     }
 }
 
+impl<'j, 'w: 'j> Joinable<'j> for &'j EntityStorage<'w>{
+    type Target = &'j Entity;
+
+    fn join(self) -> JoinIter<'j, Self::Target>{
+        JoinIter{
+            items: Box::new(
+                self.entities.iter().filter_map(move |entity|{
+                    Some((!self.empties.contains(entity), Some(entity)))
+                })),
+        }
+    }
+}
