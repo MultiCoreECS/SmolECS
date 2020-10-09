@@ -28,7 +28,7 @@ unsafe impl<'w> Send for Run<'w>{}
 unsafe impl<'w> Sync for Run<'w>{}
 
 impl<'w> SystemScheduler<'w>{
-    fn new(pool: Arc<rayon::ThreadPool>) -> Self{
+    pub fn new(pool: Arc<rayon::ThreadPool>) -> Self{
         SystemScheduler{
             systems: HashMap::new(),
             pool
@@ -54,6 +54,7 @@ impl<'w> Scheduler<'w, World> for SystemScheduler<'w>{
         let mut in_use_resources: Arc<Mutex<HashMap<String, DepVec>>> = Arc::new(Mutex::new(HashMap::new()));
         
         let mut all_systems_done = false;
+
 
         while !all_systems_done{
 
@@ -243,7 +244,7 @@ mod tests{
         world.register_comp::<usize>();
 
         for i in 0..10{
-            world.get_comp_mut::<usize>().set(&i, i);
+            world.get_comp_mut::<usize>().set(i, i);
         }
 
         let reader = ReadComp::<usize>::get_data(&world);

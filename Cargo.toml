@@ -9,3 +9,4 @@ edition = "2018"
 [dependencies]
 SmolHBSECS = {path = "./SmolHBSECS"}
 SmolCommon = {path = "./SmolCommon"}
+rayon = "1.4.1"

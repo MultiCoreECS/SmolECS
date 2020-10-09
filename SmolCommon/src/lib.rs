@@ -76,22 +76,15 @@ impl DepVec{
         let mut other = other.clone();
         check.len_fix(&mut other);
 
-        let mut res_read = check.res_read.clone();
-        res_read.and(&other.res_read);
-        let mut res_write = check.res_write.clone();
-        res_write.and(&other.res_read);
-        
-        let mut comp_read = check.comp_read.clone();
-        comp_read.and(&other.comp_read);
-        let mut comp_write = check.comp_write.clone();
-        comp_write.and(&other.comp_write);
+        check.res_read.and(&other.res_read);
 
-        DepVec{
-            res_read,
-            res_write,
-            comp_read,
-            comp_write,
-        }
+        check.res_write.and(&other.res_write);
+        
+        check.comp_read.and(&other.comp_read);
+        
+        check.comp_write.and(&other.comp_write);
+
+        check
     }
 
     fn len_fix_single(&mut self, other: &mut BitVec){

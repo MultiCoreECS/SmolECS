@@ -21,7 +21,7 @@ pub trait Scheduler<'w, W: WorldCommon>{
 pub trait System<'d>{
     type SystemData: SystemData<'d> + Sized;
 
-    fn run(resources: Self::SystemData){}
+    fn run(resources: Self::SystemData);
 
     fn get_system_data<'w: 'd, W: WorldCommon>(world: &'w W) -> Self::SystemData{
         Self::SystemData::get_data(world)
@@ -42,8 +42,8 @@ pub struct ReadComp<'d, T: 'static + Component>{
 }
 
 impl<'d, T: Component> ReadComp<'d, T>{
-    pub fn get(&'d self, entity: &usize) -> Option<&'d T>{
-        self.comp.get(entity)
+    pub fn get(&'d self, entity: usize) -> Option<&'d T>{
+        self.comp.get(&entity)
     }
 }
 
@@ -80,16 +80,16 @@ impl<'d, T: Component> WriteComp<'d, T>{
         self.comp.get(entity)
     }
 
-    pub fn get_mut(&'d mut self, entity: &usize) -> Option<&'d mut T>{
-        self.comp.get_mut(entity)
+    pub fn get_mut(&'d mut self, entity: usize) -> Option<&'d mut T>{
+        self.comp.get_mut(&entity)
     }
 
-    pub fn set(&'d mut self, entity: &usize, comp: T){
-        self.comp.set(entity, comp)
+    pub fn set(&mut self, entity: usize, comp: T){
+        self.comp.set(&entity, comp)
     }
 
-    pub fn delete(&'d mut self, entity: &usize){
-        self.comp.delete(entity);
+    pub fn delete(&mut self, entity: usize){
+        self.comp.delete(&entity);
     }
 }
 

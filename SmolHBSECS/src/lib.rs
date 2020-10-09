@@ -16,13 +16,12 @@ pub struct Entity{
 
 impl EntityCommon for Entity{
 
-    fn add<'d, T: Component>(&'d self, storage: &'d mut WriteComp<'d, T>, comp: T){
-        let index = self.index;
-        storage.set(&index, comp);
+    fn add<'e, 'd: 'e, T: Component>(&'e self, storage: &'e mut WriteComp<'d, T>, comp: T){
+        storage.set(self.index, comp);
     }
 
-    fn remove<'d, T: Component>(&'d self, storage: &'d mut WriteComp<'d, T>){
-        storage.delete(&(self.index.clone()));
+    fn remove<'e, 'd: 'e, T: Component>(&'e self, storage: &'e mut WriteComp<'d, T>){
+        storage.delete(self.index);
     }
 }
 
