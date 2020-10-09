@@ -11,7 +11,6 @@ use std::ops::Deref;
 // Stores systems as a tuple of dependencies, init funcs, and run funcs
 pub struct SystemScheduler<'w>{
     systems: HashMap<String, StoredSys<'w>>,
-    max_threads: usize,
 }
 
 struct StoredSys<'w>{
@@ -28,10 +27,9 @@ unsafe impl Send for Run{}
 unsafe impl Sync for Run{}
 
 impl<'w> SystemScheduler<'w>{
-    fn new(max_threads: usize) -> Self{
+    fn new() -> Self{
         SystemScheduler{
-            systems: HashMap::new(),
-            max_threads
+            systems: HashMap::new()
         }
     }
 }
@@ -107,7 +105,7 @@ impl<'w> Scheduler<'w, World> for SystemScheduler<'w>{
                 let done_clone = done_clone.unwrap();
                 let sys_clone = sys_clone.unwrap();
     
-                rayon::spawn(move ||{
+                rayon::spawn_fifo(move ||{
                     (run_fn.function)(&world_clone);
                     in_use_clone.lock().unwrap().remove(&sys_clone);
                     done_clone.store(true, Ordering::Relaxed);
@@ -122,6 +120,7 @@ impl<'w> Scheduler<'w, World> for SystemScheduler<'w>{
 #[cfg(test)]
 mod tests{
     use crate::world::World;
+    use crate::system::SystemScheduler;
     use SmolCommon::WorldCommon;
     use SmolCommon::system::*;
     use SmolCommon::join::Joinable;
@@ -288,5 +287,32 @@ mod tests{
         *writer *= 2;
         assert_eq!(String::from("Hello, my name is James!"), *reader);
         assert_eq!(40, *writer);
+    }
+
+    struct TimesTwo;
+
+    impl<'w> System<'w> for TimesTwo{
+        type SystemData = WriteComp<'w, usize>;
+
+        fn run(mut data: Self::SystemData){
+            for num in data.join(){
+            }
+        }
+    }
+
+    #[test]
+    fn scheduler_basic_test(){
+        let mut world = World::new();
+
+        world.register_comp::<usize>();
+
+        for i in 0..10{
+            world.get_comp_mut::<usize>().set(&i, i);
+        }
+
+        let mut scheduler = SystemScheduler::new();
+        scheduler.add::<TimesTwo>("times_two".to_string(), Vec::new());
+
+        scheduler.run(&world);
     }
 }
