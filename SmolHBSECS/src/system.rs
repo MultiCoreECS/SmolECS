@@ -294,11 +294,12 @@ mod tests{
     struct TimesTwo;
 
     impl<'d> System<'d> for TimesTwo{
-        type SystemData = WriteComp<'d, usize>;
+        type SystemData = (WriteComp<'d, usize>, ReadComp<'d, isize>);
 
-        fn run(mut data: Self::SystemData){
-            for (num) in (&mut data).join(){
+        fn run((mut data, readme): Self::SystemData){
+            for (num, other_num) in (&mut data, &readme).join(){
                 *num *= 2;
+                
             }
         }
     }
@@ -308,9 +309,11 @@ mod tests{
         let mut world = World::new();
 
         world.register_comp::<usize>();
+        world.register_comp::<isize>();
 
         for i in 0..10{
             world.get_comp_mut::<usize>().set(&i, i);
+            world.get_comp_mut::<isize>().set(&i, i as isize);
         }
 
         let pool = Arc::new(rayon::ThreadPoolBuilder::new().num_threads(8).build().unwrap());
@@ -333,6 +336,53 @@ mod tests{
 
         for (i, &num) in (&reader).join().enumerate(){
             assert_eq!(i * 4, num);
+        }
+    }
+
+    
+    struct TimesThree;
+
+    impl<'d> System<'d> for TimesThree{
+        type SystemData = (WriteComp<'d, usize>, ReadComp<'d, isize>, WriteComp<'d, u32>);
+
+        fn run((mut data, readme, mut other_data): Self::SystemData){
+            for (num, other_num, final_num) in (&mut data, &readme, &mut other_data).join(){
+                *num *= 3;
+                *final_num = *num as u32;
+            }
+        }
+    }
+
+    #[test]
+    fn scheduler_double_write_test(){
+        let mut world = World::new();
+
+        world.register_comp::<usize>();
+        world.register_comp::<isize>();
+        world.register_comp::<u32>();
+
+        for i in 0..10{
+            world.get_comp_mut::<usize>().set(&i, i);
+            world.get_comp_mut::<isize>().set(&i, i as isize);
+            world.get_comp_mut::<u32>().set(&i, i as u32);
+        }
+
+        let pool = Arc::new(rayon::ThreadPoolBuilder::new().num_threads(8).build().unwrap());
+
+        let mut scheduler = SystemScheduler::new(pool);
+        scheduler.add::<TimesThree>("times_three".to_string(), Vec::new());
+
+        scheduler.run(&world);
+
+        let reader = ReadComp::<usize>::get_data(&world);
+        let reader_32 = ReadComp::<usize>::get_data(&world);
+
+        for (i, &num) in (&reader).join().enumerate(){
+            assert_eq!(i * 3, num);
+        }
+
+        for (i, &num) in (&reader_32).join().enumerate(){
+            assert_eq!(i * 3, num);
         }
     }
 }
