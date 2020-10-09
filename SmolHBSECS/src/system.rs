@@ -11,25 +11,27 @@ use std::ops::Deref;
 // Stores systems as a tuple of dependencies, init funcs, and run funcs
 pub struct SystemScheduler<'w>{
     systems: HashMap<String, StoredSys<'w>>,
+    pool: Arc<rayon::ThreadPool>,
 }
 
 struct StoredSys<'w>{
     dep: Vec<String>,
     get_dep_vec: Box<dyn Fn(&'w World) -> DepVec>,
-    run: Arc<Run>,
+    run: Arc<Run<'w>>,
 }
 
-struct Run{
-    function: Box<dyn Fn(&'static World)>,
+struct Run<'w>{
+    function: Box<dyn Fn(&'w World)>,
 }
 
-unsafe impl Send for Run{}
-unsafe impl Sync for Run{}
+unsafe impl<'w> Send for Run<'w>{}
+unsafe impl<'w> Sync for Run<'w>{}
 
 impl<'w> SystemScheduler<'w>{
-    fn new() -> Self{
+    fn new(pool: Arc<rayon::ThreadPool>) -> Self{
         SystemScheduler{
-            systems: HashMap::new()
+            systems: HashMap::new(),
+            pool
         }
     }
 }
@@ -41,11 +43,11 @@ impl<'w> Scheduler<'w, World> for SystemScheduler<'w>{
             StoredSys{
                 dep,
                 get_dep_vec: Box::new(|world: &'w World| {S::get_system_dependencies(world)}),
-                run: Arc::new(Run{function: Box::new(|world: &'static World| {S::run(S::get_system_data(world))})}),
+                run: Arc::new(Run{function: Box::new(|world: &'w World| {S::run(S::get_system_data(world))})}),
             });
     }
 
-    fn run(&mut self, world: &'static World){
+    fn run(&mut self, world: &'w World){
 
         let systems_done: HashMap<String, Arc<AtomicBool>> = self.systems.iter().map(|(key, value)| (key.clone(), Arc::new(AtomicBool::from(false)))).collect();
         let dep_vecs: HashMap<String, DepVec> = self.systems.iter_mut().map(|(key, value)| (key.clone(), (value.get_dep_vec)(&world))).collect();
@@ -105,7 +107,7 @@ impl<'w> Scheduler<'w, World> for SystemScheduler<'w>{
                 let done_clone = done_clone.unwrap();
                 let sys_clone = sys_clone.unwrap();
     
-                rayon::spawn_fifo(move ||{
+                self.pool.scope_fifo(move |s|{
                     (run_fn.function)(&world_clone);
                     in_use_clone.lock().unwrap().remove(&sys_clone);
                     done_clone.store(true, Ordering::Relaxed);
@@ -288,14 +290,15 @@ mod tests{
         assert_eq!(String::from("Hello, my name is James!"), *reader);
         assert_eq!(40, *writer);
     }
-
+    use std::sync::Arc;
     struct TimesTwo;
 
-    impl<'w> System<'w> for TimesTwo{
-        type SystemData = WriteComp<'w, usize>;
+    impl<'d> System<'d> for TimesTwo{
+        type SystemData = WriteComp<'d, usize>;
 
         fn run(mut data: Self::SystemData){
-            for num in data.join(){
+            for (num) in (&mut data).join(){
+                *num *= 2;
             }
         }
     }
@@ -310,9 +313,26 @@ mod tests{
             world.get_comp_mut::<usize>().set(&i, i);
         }
 
-        let mut scheduler = SystemScheduler::new();
+        let pool = Arc::new(rayon::ThreadPoolBuilder::new().num_threads(8).build().unwrap());
+
+        let mut scheduler = SystemScheduler::new(pool);
         scheduler.add::<TimesTwo>("times_two".to_string(), Vec::new());
 
         scheduler.run(&world);
+
+        let reader = ReadComp::<usize>::get_data(&world);
+
+        for (i, &num) in (&reader).join().enumerate(){
+            assert_eq!(i * 2, num);
+        }
+        drop(reader);
+
+        scheduler.run(&world);
+
+        let reader = ReadComp::<usize>::get_data(&world);
+
+        for (i, &num) in (&reader).join().enumerate(){
+            assert_eq!(i * 4, num);
+        }
     }
 }
