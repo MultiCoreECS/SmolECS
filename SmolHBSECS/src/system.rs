@@ -166,7 +166,7 @@ mod tests{
         let reader = ReadComp::<usize>::get_data(&world);
 
         for i in 0..10{
-            assert_eq!(*reader.get(&i).unwrap(), i);
+            assert_eq!(*reader.get(i).unwrap(), i);
         }
 
         drop(reader);
@@ -180,7 +180,7 @@ mod tests{
             if i == 2 || i == 8{
                 continue;
             }
-            assert_eq!(*reader.get(&i).unwrap(), i);
+            assert_eq!(*reader.get(i).unwrap(), i);
         }
 
         let mut check: Vec<usize> = (0..10).collect();
@@ -244,13 +244,13 @@ mod tests{
         world.register_comp::<usize>();
 
         for i in 0..10{
-            world.get_comp_mut::<usize>().set(i, i);
+            world.get_comp_mut::<usize>().set(&i, i);
         }
 
         let reader = ReadComp::<usize>::get_data(&world);
 
         for i in 0..10{
-            assert_eq!(*reader.get(&i).unwrap(), i);
+            assert_eq!(*reader.get(i).unwrap(), i);
         }
 
         drop(reader);
@@ -264,7 +264,7 @@ mod tests{
             if i == 2 || i == 8{
                 continue;
             }
-            assert_eq!(*reader.get(&i).unwrap(), i);
+            assert_eq!(*reader.get(i).unwrap(), i);
         }
 
         let mut check: Vec<usize> = (0..10).collect();
