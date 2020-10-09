@@ -138,3 +138,62 @@ pub fn impl_joinable_multi(input: TokenStream) -> TokenStream {
 
     out_stream.parse().unwrap()
 }
+
+#[proc_macro]
+pub fn impl_system_data(input: TokenStream) -> TokenStream{
+    let tokens: Vec<String> = input
+        .to_string()
+        .split(',')
+        .map(|token|{
+            token.to_uppercase()
+        })
+        .collect();
+
+    let mut out_stream = String::new();
+
+    out_stream.concat(format!("impl<'d"));
+    for token in tokens.iter(){
+        out_stream.concat(format!(", {}: SystemData<'d>", token));
+    }
+    out_stream.concat(format!("> SystemData<'d> for ({}", tokens[0]));
+    
+    for token in tokens.iter().skip(1){
+        out_stream.concat(format!(", {}", token));
+    }
+    out_stream.concat(format!("){{ fn get_data<'w: 'd, W: WorldCommon>(world: &'w W) -> Self{{({}::get_data(world)", tokens[0]));
+    for token in tokens.iter().skip(1){
+        out_stream.concat(format!(", {}::get_data(world)", token));
+    }
+    out_stream.concat(format!(")}}"));
+
+    out_stream.concat(format!("fn get_dep_vec<'w: 'd, W: WorldCommon>(world: &'w W) -> DepVec{{ {}::get_dep_vec(world)", tokens[0]));
+    for token in tokens.iter().skip(1){
+        out_stream.concat(format!(".and(&{}::get_dep_vec(world))", token));
+    }
+    out_stream.concat(format!("}} }}"));
+    
+
+    out_stream.parse().unwrap()
+}
+
+#[proc_macro]
+pub fn impl_system_data_multi(input: TokenStream) -> TokenStream {
+    let arg = input.to_string().parse::<usize>().unwrap();
+
+    let mut out_stream = String::new();
+
+    for i in (0..arg).skip(1){
+        out_stream.concat(format!("impl_system_data!("));
+        for j in 0..=i{
+            if j == 0{
+                out_stream.concat(format!("T{}", j));
+            }
+            else{
+                out_stream.concat(format!(", T{}", j));
+            }
+        }
+        out_stream.concat(format!(");"));
+    }
+
+    out_stream.parse().unwrap()
+}

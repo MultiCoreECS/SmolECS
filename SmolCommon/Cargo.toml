@@ -7,3 +7,5 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 SmolCommonMacros = {path="SmolCommonMacros"}
+bit-vec = "0.6.2"
+parking_lot = "0.11.0"

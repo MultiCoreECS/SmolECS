@@ -33,24 +33,22 @@ impl PartialEq for Entity {
 }
 impl Eq for Entity {}
 
-struct EntityStorage<'w>{
+pub struct EntityStorage{
     entities: Vec<Entity>,
     empties: VecDeque<Entity>,
-    world: &'w world::World,
 }
 
-impl<'w> EntityStorage<'w>{
-    pub fn new(world: &'w world::World) -> Self{
+impl EntityStorage{
+    pub fn new() -> Self{
         EntityStorage{
             entities: Vec::new(),
             empties: VecDeque::new(),
-            world,
         }
     }
 
     pub fn create_entity(&mut self) -> &Entity{
         match self.empties.pop_front(){
-            Some(mut entity) => {
+            Some(entity) => {
                 self.entities.get(entity.index).unwrap()
             },
             None => {
@@ -66,7 +64,7 @@ impl<'w> EntityStorage<'w>{
     }
 }
 
-impl<'j, 'w: 'j> Joinable<'j> for &'j EntityStorage<'w>{
+impl<'j> Joinable<'j> for &'j EntityStorage{
     type Target = &'j Entity;
 
     fn join(self) -> JoinIter<'j, Self::Target>{
