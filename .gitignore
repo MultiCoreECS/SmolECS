@@ -1,2 +1,6 @@
 /target
 Cargo.lock
+SmolHBSECS/target
+SmolCommon/target
+SmolARCECS/target
+SmolCommon/SmolCommonMacros/target
