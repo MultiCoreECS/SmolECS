@@ -16,7 +16,7 @@ pub struct SystemScheduler<'w>{
 
 struct StoredSys<'w>{
     dep: Vec<String>,
-    get_dep_vec: Box<dyn Fn(&'w World) -> DepVec>,
+    get_dep_vec: Box<dyn Fn(&World) -> DepVec>,
     run: Arc<Run<'w>>,
 }
 
@@ -36,22 +36,22 @@ impl<'w> SystemScheduler<'w>{
     }
 }
 
-impl<'w> Scheduler<'w, World> for SystemScheduler<'w>{
+impl<'d, 'w: 'd> Scheduler<'d, 'w, World> for SystemScheduler<'w>{
 
-    fn add<S: System<'w>>(&mut self, name: String, dep: Vec<String>){
+    fn add<S: System<'d>>(&mut self, name: String, dep: Vec<String>){
         self.systems.insert(name, 
             StoredSys{
                 dep,
-                get_dep_vec: Box::new(|world: &'w World| {S::get_system_dependencies(world)}),
+                get_dep_vec: Box::new(|world: &World| {S::get_system_dependencies(world)}),
                 run: Arc::new(Run{function: Box::new(|world: &'w World| {S::run(S::get_system_data(world))})}),
             });
     }
 
     fn run(&mut self, world: &'w World){
 
-        let systems_done: HashMap<String, Arc<AtomicBool>> = self.systems.iter().map(|(key, value)| (key.clone(), Arc::new(AtomicBool::from(false)))).collect();
+        let systems_done: HashMap<String, Arc<AtomicBool>> = self.systems.iter().map(|(key, _)| (key.clone(), Arc::new(AtomicBool::from(false)))).collect();
         let dep_vecs: HashMap<String, DepVec> = self.systems.iter_mut().map(|(key, value)| (key.clone(), (value.get_dep_vec)(&world))).collect();
-        let mut in_use_resources: Arc<Mutex<HashMap<String, DepVec>>> = Arc::new(Mutex::new(HashMap::new()));
+        let in_use_resources: Arc<Mutex<HashMap<String, DepVec>>> = Arc::new(Mutex::new(HashMap::new()));
         
         let mut all_systems_done = false;
 
@@ -60,7 +60,6 @@ impl<'w> Scheduler<'w, World> for SystemScheduler<'w>{
 
             let mut in_use_clone = None;
             let mut run_fn = None;
-            let mut world_clone = None;
             let mut done_clone = None;
             let mut sys_clone = None;
 
@@ -95,16 +94,15 @@ impl<'w> Scheduler<'w, World> for SystemScheduler<'w>{
 
                 in_use_clone = Some(in_use_resources.clone());
                 run_fn = Some(self.systems.get(sys).unwrap().run.clone());
-                world_clone = Some(world.clone());
                 done_clone = Some(done.clone());
                 sys_clone = Some(sys.clone());
                 break;
             }
             
-            if in_use_clone.is_some() && run_fn.is_some() && world_clone.is_some() && done_clone.is_some() && sys_clone.is_some(){
+            if in_use_clone.is_some() && run_fn.is_some() && done_clone.is_some() && sys_clone.is_some(){
                 let in_use_clone = in_use_clone.unwrap();
                 let run_fn = run_fn.unwrap();
-                let world_clone = world_clone.unwrap();
+                let world_clone = world.clone();
                 let done_clone = done_clone.unwrap();
                 let sys_clone = sys_clone.unwrap();
     
