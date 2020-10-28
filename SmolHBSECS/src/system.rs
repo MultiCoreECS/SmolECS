@@ -103,6 +103,7 @@ impl<'d, 'w: 'd> Scheduler<'d, 'w, World> for SystemScheduler<'d, 'w>{
 
                 self.pool.scope_fifo(|s|{
                     system_to_run.as_ref().unwrap().system.get_and_run(&world);
+                    println!("just rang {}", sys_clone);
                     in_use_clone.lock().unwrap().remove(&sys_clone);
                     done_clone.store(true, Ordering::Relaxed);
                 });
