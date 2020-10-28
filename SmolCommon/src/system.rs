@@ -13,29 +13,43 @@ use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard, MappedRwLockReadGua
 use SmolCommonMacros::{impl_system_data, impl_system_data_multi};
 
 pub trait Scheduler<'d, 'w: 'd, W: WorldCommon>{
-    fn add<S: System<'d>>(&mut self, name: String, depend: Vec<String>);
+    fn add<S:'w + System<'d, 'w, W>>(&mut self, system: S, name: String, depend: Vec<String>);
 
     fn run(&self, world: &'w W);
 }
 
-pub trait System<'d>{
+pub trait System<'d, 'w: 'd, W: WorldCommon>{
     type SystemData: SystemData<'d> + Sized;
 
-    fn get_and_run<'w: 'd, W: WorldCommon>(world: &'w W){
-        Self::run(Self::SystemData::get_data(world));
-    }
 
-    fn run(resources: Self::SystemData);
+    fn run(&self, resources: Self::SystemData);
 
-    fn get_system_data<'w: 'd, W: WorldCommon>(world: &'w W) -> Self::SystemData{
+    fn get_system_data(world: &'w W) -> Self::SystemData{
         Self::SystemData::get_data(world)
     }
 
-    fn get_system_dependencies<W: WorldCommon>(world: &W) -> DepVec{
+    fn get_system_dependencies(&self, world: &W) -> DepVec{
         Self::SystemData::get_dep_vec(world)
     }
 }
 
+pub trait SystemRunner<'d, 'w: 'd, W: WorldCommon>{
+    fn get_and_run(&self, world: &'w W);
+    fn get_system_dependencies(&self, world: &W) -> DepVec;
+}
+
+impl<'d, 'w: 'd, W: WorldCommon, T, Q> SystemRunner<'d, 'w, W> for T
+    where T: System<'d, 'w, W, SystemData = Q>,
+          Q: SystemData<'d> + Sized{
+
+    fn get_and_run(&self, world: &'w W){
+        self.run(T::SystemData::get_data(world));
+    }
+
+    fn get_system_dependencies(&self, world: &W) -> DepVec {
+        T::SystemData::get_dep_vec(world)
+    }
+}
 
 pub trait SystemData<'d>{
     fn get_data<'w: 'd, W: WorldCommon>(world: &'w W) -> Self;

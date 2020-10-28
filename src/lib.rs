@@ -32,14 +32,14 @@ mod tests{
 
     struct AddOne;
 
-    impl<'s> System<'s> for AddOne{
+    impl<'d, 'w: 'd> System<'d, 'w, World> for AddOne{
         type SystemData = (
-            Write<'s, EntityStorage>,
-            WriteComp<'s, usize>,
-            WriteComp<'s, isize>
+            Write<'d, EntityStorage>,
+            WriteComp<'d, usize>,
+            WriteComp<'d, isize>
         );
 
-        fn run((mut es, mut us, mut is): Self::SystemData) { 
+        fn run(&self, (mut es, mut us, mut is): Self::SystemData) { 
             let ent = es.create_entity();
             ent.add(&mut us, 0);
             ent.add(&mut is, 0);
@@ -52,12 +52,12 @@ mod tests{
 
     struct SubOne;
 
-    impl<'s> System<'s> for SubOne{
+    impl<'d, 'w: 'd> System<'d, 'w, World> for SubOne{
         type SystemData = 
-            WriteComp<'s, isize>
+            WriteComp<'d, isize>
         ;
 
-        fn run(mut is: Self::SystemData) { 
+        fn run(&self, mut is: Self::SystemData) { 
             for i in (&mut is).join(){
                 *i -= 1;
             }
@@ -66,14 +66,14 @@ mod tests{
 
     struct CounterCheck;
 
-    impl<'s> System<'s> for CounterCheck{
+    impl<'d, 'w: 'd> System<'d, 'w, World> for CounterCheck{
         type SystemData = (
-            ReadComp<'s, usize>,
-            ReadComp<'s, isize>,
-            Write<'s, usize>
+            ReadComp<'d, usize>,
+            ReadComp<'d, isize>,
+            Write<'d, usize>
         );
 
-        fn run((us, is, mut counter): Self::SystemData) { 
+        fn run(&self, (us, is, mut counter): Self::SystemData) { 
             for (u, i) in (&us, &is).join(){
                 *counter = std::cmp::max(*u, *counter);
             }
@@ -82,13 +82,13 @@ mod tests{
 
     struct SubCheck;
 
-    impl<'s> System<'s> for SubCheck{
+    impl<'d, 'w: 'd> System<'d, 'w, World> for SubCheck{
         type SystemData = (
-            ReadComp<'s, isize>,
-            Write<'s, isize>
+            ReadComp<'d, isize>,
+            Write<'d, isize>
         );
 
-        fn run((is, mut counter): Self::SystemData) { 
+        fn run(&self, (is, mut counter): Self::SystemData) { 
             for (i) in (&is).join(){
                 *counter = *i;
             }
@@ -109,10 +109,10 @@ mod tests{
         let pool = Arc::new(rayon::ThreadPoolBuilder::new().num_threads(8).build().unwrap());
         let mut schedule = SystemScheduler::new(pool);
 
-        schedule.add::<AddOne>("AddOne".to_owned(), vec![]);
-        schedule.add::<SubOne>("SubOne".to_owned(), vec!["AddOne".to_owned()]);
-        schedule.add::<CounterCheck>("CounterCheck".to_owned(), vec!["SubOne".to_owned()]);
-        schedule.add::<SubCheck>("SubCheck".to_owned(), vec!["SubOne".to_owned()]);
+        schedule.add(AddOne{}, "AddOne".to_owned(), vec![]);
+        schedule.add(SubOne{}, "SubOne".to_owned(), vec!["AddOne".to_owned()]);
+        schedule.add(CounterCheck{}, "CounterCheck".to_owned(), vec!["SubOne".to_owned()]);
+        schedule.add(SubCheck{}, "SubCheck".to_owned(), vec!["SubOne".to_owned()]);
 
         for i in 1..1000{
             schedule.run(&world);

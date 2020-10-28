@@ -9,25 +9,20 @@ use rayon;
 use std::ops::Deref;
 
 // Stores systems as a tuple of dependencies, init funcs, and run funcs
-pub struct SystemScheduler<'w>{
-    systems: HashMap<String, StoredSys<'w>>,
+pub struct SystemScheduler<'d, 'w: 'd>{
+    systems: HashMap<String, StoredSys<'d, 'w>>,
     pool: Arc<rayon::ThreadPool>,
 }
 
-struct StoredSys<'w>{
+struct StoredSys<'d, 'w: 'd>{
     dep: Vec<String>,
-    get_dep_vec: Box<fn(&World) -> DepVec>,
-    run: Arc<Run<'w>>,
+    system: Box<dyn SystemRunner<'d, 'w, World> + 'w>,
 }
 
-struct Run<'w>{
-    function: Box<fn(&'w World)>,
-}
+unsafe impl<'d, 'w: 'd> Send for StoredSys<'d, 'w>{}
+unsafe impl<'d, 'w: 'd> Sync for StoredSys<'d, 'w>{}
 
-unsafe impl<'w> Send for Run<'w>{}
-unsafe impl<'w> Sync for Run<'w>{}
-
-impl<'w> SystemScheduler<'w>{
+impl<'d, 'w: 'd> SystemScheduler<'d, 'w>{
     pub fn new(pool: Arc<rayon::ThreadPool>) -> Self{
         SystemScheduler{
             systems: HashMap::new(),
@@ -36,21 +31,20 @@ impl<'w> SystemScheduler<'w>{
     }
 }
 
-impl<'d, 'w: 'd> Scheduler<'d, 'w, World> for SystemScheduler<'w>{
+impl<'d, 'w: 'd> Scheduler<'d, 'w, World> for SystemScheduler<'d, 'w>{
 
-    fn add<S: System<'d>>(&mut self, name: String, dep: Vec<String>){
+    fn add<S:'w + System<'d, 'w, World>>(&mut self, system: S, name: String, dep: Vec<String>){
         self.systems.insert(name, 
             StoredSys{
                 dep,
-                get_dep_vec: Box::new(S::get_system_dependencies),
-                run: Arc::new(Run{function: Box::new(S::get_and_run)}),
+                system: Box::new(system),
             });
     }
 
     fn run(&self, world: &'w World){
 
         let systems_done: HashMap<String, Arc<AtomicBool>> = self.systems.iter().map(|(key, _)| (key.clone(), Arc::new(AtomicBool::from(false)))).collect();
-        let dep_vecs: HashMap<String, DepVec> = self.systems.iter().map(|(key, value)| (key.clone(), (value.get_dep_vec)(&world))).collect();
+        let dep_vecs: HashMap<String, DepVec> = self.systems.iter().map(|(key, value)| (key.clone(), value.system.get_system_dependencies(&world))).collect();
         let in_use_resources: Arc<Mutex<HashMap<String, DepVec>>> = Arc::new(Mutex::new(HashMap::new()));
         
         let mut all_systems_done = false;
@@ -59,7 +53,6 @@ impl<'d, 'w: 'd> Scheduler<'d, 'w, World> for SystemScheduler<'w>{
         while !all_systems_done{
 
             let mut in_use_clone = None;
-            let mut run_fn = None;
             let mut done_clone = None;
             let mut sys_clone = None;
 
@@ -93,21 +86,19 @@ impl<'d, 'w: 'd> Scheduler<'d, 'w, World> for SystemScheduler<'w>{
                 in_use_resources.lock().unwrap().insert(sys.clone(), sys_res.clone());
 
                 in_use_clone = Some(in_use_resources.clone());
-                run_fn = Some(self.systems.get(sys).unwrap().run.clone());
                 done_clone = Some(done.clone());
                 sys_clone = Some(sys.clone());
                 break;
             }
             
-            if in_use_clone.is_some() && run_fn.is_some() && done_clone.is_some() && sys_clone.is_some(){
+            if in_use_clone.is_some() && done_clone.is_some() && sys_clone.is_some(){
                 let in_use_clone = in_use_clone.unwrap();
-                let run_fn = run_fn.unwrap();
                 let done_clone = done_clone.unwrap();
                 let sys_clone = sys_clone.unwrap();
-                let world: &'w World = world;
+                let system_to_run = &self.systems.get(&sys_clone);
 
                 self.pool.scope_fifo(|s|{
-                    (run_fn.function)(world);
+                    system_to_run.as_ref().unwrap().system.get_and_run(&world);
                     in_use_clone.lock().unwrap().remove(&sys_clone);
                     done_clone.store(true, Ordering::Relaxed);
                 });
@@ -291,10 +282,10 @@ mod tests{
     use std::sync::Arc;
     struct TimesTwo;
 
-    impl<'d> System<'d> for TimesTwo{
+    impl<'d, 'w: 'd> System<'d, 'w, World> for TimesTwo{
         type SystemData = (WriteComp<'d, usize>, ReadComp<'d, isize>);
 
-        fn run((mut data, readme): Self::SystemData){
+        fn run(&self, (mut data, readme): Self::SystemData){
             for (num, other_num) in (&mut data, &readme).join(){
                 *num *= 2;
                 
@@ -317,7 +308,7 @@ mod tests{
         let pool = Arc::new(rayon::ThreadPoolBuilder::new().num_threads(8).build().unwrap());
 
         let mut scheduler = SystemScheduler::new(pool);
-        scheduler.add::<TimesTwo>("times_two".to_string(), Vec::new());
+        scheduler.add(TimesTwo{}, "times_two".to_string(), Vec::new());
 
         scheduler.run(&world);
 
@@ -340,10 +331,10 @@ mod tests{
     
     struct TimesThree;
 
-    impl<'d> System<'d> for TimesThree{
+    impl<'d, 'w: 'd> System<'d, 'w, World> for TimesThree{
         type SystemData = (WriteComp<'d, usize>, ReadComp<'d, isize>, WriteComp<'d, u32>);
 
-        fn run((mut data, readme, mut other_data): Self::SystemData){
+        fn run(&self, (mut data, readme, mut other_data): Self::SystemData){
             for (num, other_num, final_num) in (&mut data, &readme, &mut other_data).join(){
                 *num *= 3;
                 *final_num = *num as u32;
@@ -368,7 +359,7 @@ mod tests{
         let pool = Arc::new(rayon::ThreadPoolBuilder::new().num_threads(8).build().unwrap());
 
         let mut scheduler = SystemScheduler::new(pool);
-        scheduler.add::<TimesThree>("times_three".to_string(), Vec::new());
+        scheduler.add(TimesThree{},"times_three".to_string(), Vec::new());
 
         scheduler.run(&world);
 
