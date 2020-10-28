@@ -15,7 +15,7 @@ use SmolCommonMacros::{impl_system_data, impl_system_data_multi};
 pub trait Scheduler<'d, 'w: 'd, W: WorldCommon>{
     fn add<S: System<'d>>(&mut self, name: String, depend: Vec<String>);
 
-    fn run<'a: 'w>(&mut self, world: &'a W);
+    fn run(&mut self, world: &'w W);
 }
 
 pub trait System<'d>{

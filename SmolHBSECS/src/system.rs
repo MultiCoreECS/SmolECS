@@ -47,7 +47,7 @@ impl<'d, 'w: 'd> Scheduler<'d, 'w, World> for SystemScheduler<'w>{
             });
     }
 
-    fn run<'a: 'w>(&mut self, world: &'a World){
+    fn run(&mut self, world: &'w World){
 
         let systems_done: HashMap<String, Arc<AtomicBool>> = self.systems.iter().map(|(key, _)| (key.clone(), Arc::new(AtomicBool::from(false)))).collect();
         let dep_vecs: HashMap<String, DepVec> = self.systems.iter_mut().map(|(key, value)| (key.clone(), (value.get_dep_vec)(&world))).collect();
@@ -104,7 +104,6 @@ impl<'d, 'w: 'd> Scheduler<'d, 'w, World> for SystemScheduler<'w>{
                 let run_fn = run_fn.unwrap();
                 let done_clone = done_clone.unwrap();
                 let sys_clone = sys_clone.unwrap();
-                let world: &'w World = world;
     
                 self.pool.scope_fifo(|s|{
                     (run_fn.function)(world);
