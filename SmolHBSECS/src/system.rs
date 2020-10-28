@@ -83,7 +83,9 @@ impl<'d, 'w: 'd> Scheduler<'d, 'w, World> for SystemScheduler<'d, 'w>{
                     continue;
                 }
                 
+                println!("Getting resources");
                 in_use_resources.lock().unwrap().insert(sys.clone(), sys_res.clone());
+                println!("Got resources");
 
                 in_use_clone = Some(in_use_resources.clone());
                 done_clone = Some(done.clone());
