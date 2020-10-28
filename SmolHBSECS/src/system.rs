@@ -99,6 +99,8 @@ impl<'d, 'w: 'd> Scheduler<'d, 'w, World> for SystemScheduler<'d, 'w>{
                 let sys_clone = sys_clone.unwrap();
                 let system_to_run = &self.systems.get(&sys_clone);
 
+                println!("trying to run {}", sys_clone);
+
                 self.pool.scope_fifo(|s|{
                     system_to_run.as_ref().unwrap().system.get_and_run(&world);
                     in_use_clone.lock().unwrap().remove(&sys_clone);
