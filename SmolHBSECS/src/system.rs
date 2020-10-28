@@ -116,7 +116,6 @@ impl<'d, 'w: 'd> Scheduler<'d, 'w, World> for SystemScheduler<'w>{
         }
     }
 }
-
 #[cfg(test)]
 mod tests{
     use crate::world::World;
