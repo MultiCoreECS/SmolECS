@@ -102,12 +102,11 @@ impl<'d, 'w: 'd> Scheduler<'d, 'w, World> for SystemScheduler<'w>{
             if in_use_clone.is_some() && run_fn.is_some() && done_clone.is_some() && sys_clone.is_some(){
                 let in_use_clone = in_use_clone.unwrap();
                 let run_fn = run_fn.unwrap();
-                let world_clone = world.clone();
                 let done_clone = done_clone.unwrap();
                 let sys_clone = sys_clone.unwrap();
     
-                self.pool.scope_fifo(move |s|{
-                    (run_fn.function)(&world_clone);
+                self.pool.scope_fifo(|s|{
+                    (run_fn.function)(world);
                     in_use_clone.lock().unwrap().remove(&sys_clone);
                     done_clone.store(true, Ordering::Relaxed);
                 });
