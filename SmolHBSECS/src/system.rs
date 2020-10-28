@@ -47,10 +47,10 @@ impl<'d, 'w: 'd> Scheduler<'d, 'w, World> for SystemScheduler<'w>{
             });
     }
 
-    fn run(&mut self, world: &'w World){
+    fn run(&self, world: &'w World){
 
         let systems_done: HashMap<String, Arc<AtomicBool>> = self.systems.iter().map(|(key, _)| (key.clone(), Arc::new(AtomicBool::from(false)))).collect();
-        let dep_vecs: HashMap<String, DepVec> = self.systems.iter_mut().map(|(key, value)| (key.clone(), (value.get_dep_vec)(&world))).collect();
+        let dep_vecs: HashMap<String, DepVec> = self.systems.iter().map(|(key, value)| (key.clone(), (value.get_dep_vec)(&world))).collect();
         let in_use_resources: Arc<Mutex<HashMap<String, DepVec>>> = Arc::new(Mutex::new(HashMap::new()));
         
         let mut all_systems_done = false;
