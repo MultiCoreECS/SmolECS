@@ -16,12 +16,12 @@ pub struct SystemScheduler<'w>{
 
 struct StoredSys<'w>{
     dep: Vec<String>,
-    get_dep_vec: Box<dyn Fn(&World) -> DepVec>,
+    get_dep_vec: Box<fn(&World) -> DepVec>,
     run: Arc<Run<'w>>,
 }
 
 struct Run<'w>{
-    function: Box<dyn Fn(&'w World)>,
+    function: Box<fn(&'w World)>,
 }
 
 unsafe impl<'w> Send for Run<'w>{}
@@ -42,8 +42,8 @@ impl<'d, 'w: 'd> Scheduler<'d, 'w, World> for SystemScheduler<'w>{
         self.systems.insert(name, 
             StoredSys{
                 dep,
-                get_dep_vec: Box::new(|world: &World| {S::get_system_dependencies(world)}),
-                run: Arc::new(Run{function: Box::new(|world: &'w World| {S::run(S::get_system_data(world))})}),
+                get_dep_vec: Box::new(S::get_system_dependencies),
+                run: Arc::new(Run{function: Box::new(S::get_and_run)}),
             });
     }
 
