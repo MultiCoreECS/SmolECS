@@ -104,7 +104,8 @@ impl<'d, 'w: 'd> Scheduler<'d, 'w, World> for SystemScheduler<'w>{
                 let run_fn = run_fn.unwrap();
                 let done_clone = done_clone.unwrap();
                 let sys_clone = sys_clone.unwrap();
-    
+                let world: &'w World = world;
+
                 self.pool.scope_fifo(|s|{
                     (run_fn.function)(world);
                     in_use_clone.lock().unwrap().remove(&sys_clone);
