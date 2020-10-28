@@ -52,3 +52,4 @@ impl<'w, A, B> Joinable<'w> for (A, B)
 */
 
 impl_joinable_multi!(16);
+

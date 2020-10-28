@@ -6,6 +6,7 @@ pub mod world{
 pub mod entity{
     pub use SmolCommon::entity::EntityCommon;
     pub use SmolHBSECS::{Entity, EntityStorage};
+
 }
 
 pub mod component{

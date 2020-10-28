@@ -166,7 +166,7 @@ pub fn impl_system_data(input: TokenStream) -> TokenStream{
     }
     out_stream.concat(format!(")}}"));
 
-    out_stream.concat(format!("fn get_dep_vec<'w: 'd, W: WorldCommon>(world: &'w W) -> DepVec{{ {}::get_dep_vec(world)", tokens[0]));
+    out_stream.concat(format!("fn get_dep_vec<'w: 'd, W: WorldCommon>(world: &W) -> DepVec{{ {}::get_dep_vec(world)", tokens[0]));
     for token in tokens.iter().skip(1){
         out_stream.concat(format!(".and(&{}::get_dep_vec(world))", token));
     }

@@ -12,8 +12,8 @@ use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard, MappedRwLockReadGua
 
 use SmolCommonMacros::{impl_system_data, impl_system_data_multi};
 
-pub trait Scheduler<'w, W: WorldCommon>{
-    fn add<S: System<'w>>(&mut self, name: String, depend: Vec<String>);
+pub trait Scheduler<'d, 'w: 'd, W: WorldCommon>{
+    fn add<S: System<'d>>(&mut self, name: String, depend: Vec<String>);
 
     fn run(&mut self, world: &'w W);
 }
@@ -27,14 +27,14 @@ pub trait System<'d>{
         Self::SystemData::get_data(world)
     }
 
-    fn get_system_dependencies<'w: 'd, W: WorldCommon>(world: &'w W) -> DepVec{
+    fn get_system_dependencies<W: WorldCommon>(world: &W) -> DepVec{
         Self::SystemData::get_dep_vec(world)
     }
 }
 
 pub trait SystemData<'d>{
     fn get_data<'w: 'd, W: WorldCommon>(world: &'w W) -> Self;
-    fn get_dep_vec<'w: 'd, W: WorldCommon>(world: &'w W) -> DepVec;
+    fn get_dep_vec<'w: 'd, W: WorldCommon>(world: &W) -> DepVec;
 }
 
 pub struct ReadComp<'d, T: 'static + Component>{
@@ -55,7 +55,7 @@ impl<'d, T> SystemData<'d> for ReadComp<'d, T>
         }
     }
 
-    fn get_dep_vec<'w: 'd, W: WorldCommon>(world: &'w W) -> DepVec{
+    fn get_dep_vec<'w: 'd, W: WorldCommon>(world: &W) -> DepVec{
         world.get_dep_vec_comp::<T>(AccessType::Read)
     }
 }
@@ -101,7 +101,7 @@ impl<'d, T> SystemData<'d> for WriteComp<'d, T>
         }
     }
 
-    fn get_dep_vec<'w: 'd, W: WorldCommon>(world: &'w W) -> DepVec{
+    fn get_dep_vec<'w: 'd, W: WorldCommon>(world: &W) -> DepVec{
         world.get_dep_vec_comp::<T>(AccessType::Write)
     }
 }
@@ -137,7 +137,7 @@ impl<'d, T> SystemData<'d> for Read<'d, T>
         }
     }
 
-    fn get_dep_vec<'w: 'd, W: WorldCommon>(world: &'w W) -> DepVec{
+    fn get_dep_vec<'w: 'd, W: WorldCommon>(world: &W) -> DepVec{
         world.get_dep_vec_res::<T>(AccessType::Read)
     }
 }
@@ -168,7 +168,7 @@ impl<'d, T> SystemData<'d> for Write<'d, T>
         }
     }
 
-    fn get_dep_vec<'w: 'd, W: WorldCommon>(world: &'w W) -> DepVec{
+    fn get_dep_vec<'w: 'd, W: WorldCommon>(world: &W) -> DepVec{
         world.get_dep_vec_res::<T>(AccessType::Write)
     }
 }
