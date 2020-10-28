@@ -32,17 +32,6 @@ pub trait System<'d>{
     }
 }
 
-pub trait SystemRunner<'d>{
-    fn sys_run<'w: 'd, W: WorldCommon>(world: &'w W);
-}
-
-impl<'d, T, Q> SystemRunner<'d> for T
-    where T: System<'d, SystemData = Q>,
-          Q: SystemData<'d> + Sized{
-    fn sys_run<'w: 'd, W: WorldCommon>(world: &'w W){
-        Self::run(Self::get_system_data(world));
-    }
-}
 
 pub trait SystemData<'d>{
     fn get_data<'w: 'd, W: WorldCommon>(world: &'w W) -> Self;
