@@ -43,7 +43,9 @@ impl<'d, 'w: 'd, W: WorldCommon, T, Q> SystemRunner<'d, 'w, W> for T
           Q: SystemData<'d> + Sized{
 
     fn get_and_run(&self, world: &'w W){
+        println!("got");
         self.run(T::SystemData::get_data(world));
+        println!("ran");
     }
 
     fn get_system_dependencies(&self, world: &W) -> DepVec {
