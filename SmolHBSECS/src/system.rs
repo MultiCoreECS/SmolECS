@@ -63,7 +63,7 @@ impl<'d, 'w: 'd> Scheduler<'d, 'w, World> for SystemScheduler<'d, 'w>{
                 if done.load(Ordering::Relaxed){
                     continue;
                 }
-
+                println!("Not done system found: {}", sys);
                 systems_done_check = false;
 
                 //When incomplete system found, check if it's dependencies are complete
