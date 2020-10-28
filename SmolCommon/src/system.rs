@@ -21,6 +21,10 @@ pub trait Scheduler<'d, 'w: 'd, W: WorldCommon>{
 pub trait System<'d>{
     type SystemData: SystemData<'d> + Sized;
 
+    fn get_and_run<'w: 'd, W: WorldCommon>(world: &'w W){
+        Self::run(Self::SystemData::get_data(world));
+    }
+
     fn run(resources: Self::SystemData);
 
     fn get_system_data<'w: 'd, W: WorldCommon>(world: &'w W) -> Self::SystemData{
