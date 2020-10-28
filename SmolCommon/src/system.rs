@@ -136,6 +136,17 @@ impl<'j, 'd: 'j, T> Joinable<'j> for &'j mut WriteComp<'d, T>
     }
 }
 
+impl<'j, 'd: 'j, T> Joinable<'j> for &'j WriteComp<'d, T>
+    where T: Component + 'j{
+    type Target = &'j T;
+
+    fn join(self) -> JoinIter<'j, Self::Target>{
+        JoinIter{
+            items: Box::new(self.comp.iter()),
+        }
+    }
+}
+
 pub struct Read<'d, T: 'static + Resource>{
     comp: MappedRwLockReadGuard<'d, T>
 }
