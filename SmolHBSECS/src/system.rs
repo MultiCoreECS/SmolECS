@@ -51,7 +51,7 @@ impl<'d, 'w: 'd> Scheduler<'d, 'w, World> for SystemScheduler<'d, 'w>{
 
 
         while !all_systems_done{
-
+            println!("Not Done");
             let mut in_use_clone = None;
             let mut done_clone = None;
             let mut sys_clone = None;
@@ -308,7 +308,7 @@ mod tests{
         let pool = Arc::new(rayon::ThreadPoolBuilder::new().num_threads(8).build().unwrap());
 
         let mut scheduler = SystemScheduler::new(pool);
-        scheduler.add(TimesTwo{}, "times_two".to_string(), Vec::new());
+        scheduler.add(TimesTwo{}, "times_two", Vec::new());
 
         scheduler.run(&world);
 
@@ -359,7 +359,7 @@ mod tests{
         let pool = Arc::new(rayon::ThreadPoolBuilder::new().num_threads(8).build().unwrap());
 
         let mut scheduler = SystemScheduler::new(pool);
-        scheduler.add(TimesThree{},"times_three".to_string(), Vec::new());
+        scheduler.add(TimesThree{},"times_three", Vec::new());
 
         scheduler.run(&world);
 

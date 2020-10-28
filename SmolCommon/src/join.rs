@@ -5,7 +5,7 @@ pub trait Joinable<'w> {
 }
 
 pub struct JoinIter<'w, T>{
-    pub items: Box<Iterator<Item = (bool, Option<T>)> + 'w>
+    pub items: Box<Iterator<Item = (bool, Option<T>)> + 'w>,
 }
 
 impl<'w, T> Iterator for JoinIter<'w, T>{
