@@ -51,7 +51,6 @@ impl<'d, 'w: 'd> Scheduler<'d, 'w, World> for SystemScheduler<'d, 'w>{
 
 
         while !all_systems_done{
-            println!("Not Done");
             let mut in_use_clone = None;
             let mut done_clone = None;
             let mut sys_clone = None;
@@ -63,7 +62,7 @@ impl<'d, 'w: 'd> Scheduler<'d, 'w, World> for SystemScheduler<'d, 'w>{
                 if done.load(Ordering::Relaxed){
                     continue;
                 }
-                println!("Not done system found: {}", sys);
+                
                 systems_done_check = false;
 
                 //When incomplete system found, check if it's dependencies are complete
@@ -83,9 +82,7 @@ impl<'d, 'w: 'd> Scheduler<'d, 'w, World> for SystemScheduler<'d, 'w>{
                     continue;
                 }
                 
-                println!("Getting resources");
                 in_use_resources.lock().unwrap().insert(sys.clone(), sys_res.clone());
-                println!("Got resources");
 
                 in_use_clone = Some(in_use_resources.clone());
                 done_clone = Some(done.clone());
@@ -99,11 +96,8 @@ impl<'d, 'w: 'd> Scheduler<'d, 'w, World> for SystemScheduler<'d, 'w>{
                 let sys_clone = sys_clone.unwrap();
                 let system_to_run = &self.systems.get(&sys_clone);
 
-                println!("trying to run {}", sys_clone);
-
                 self.pool.scope_fifo(|s|{
                     system_to_run.as_ref().unwrap().system.get_and_run(&world);
-                    println!("just rang {}", sys_clone);
                     in_use_clone.lock().unwrap().remove(&sys_clone);
                     done_clone.store(true, Ordering::Relaxed);
                 });
