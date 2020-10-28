@@ -109,16 +109,16 @@ mod tests{
         let pool = Arc::new(rayon::ThreadPoolBuilder::new().num_threads(8).build().unwrap());
         let mut schedule = SystemScheduler::new(pool);
 
-        schedule.add(AddOne{}, "AddOne".to_owned(), vec![]);
-        schedule.add(SubOne{}, "SubOne".to_owned(), vec!["AddOne".to_owned()]);
-        schedule.add(CounterCheck{}, "CounterCheck".to_owned(), vec!["SubOne".to_owned()]);
-        schedule.add(SubCheck{}, "SubCheck".to_owned(), vec!["SubOne".to_owned()]);
+        schedule.add(AddOne{}, "AddOne", vec![]);
+        schedule.add(SubOne{}, "SubOne", vec!["AddOne"]);
+        schedule.add(CounterCheck{}, "CounterCheck", vec!["SubOne"]);
+        schedule.add(SubCheck{}, "SubCheck", vec!["SubOne"]);
 
         for i in 1..1000{
             schedule.run(&world);
             let counter_reader = Read::<usize>::get_data(&world);
             let sub_reader = Read::<isize>::get_data(&world);
-
+            
             assert_eq!(*counter_reader, i);
             assert_eq!(*sub_reader, 0);
         }

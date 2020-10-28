@@ -33,10 +33,10 @@ impl<'d, 'w: 'd> SystemScheduler<'d, 'w>{
 
 impl<'d, 'w: 'd> Scheduler<'d, 'w, World> for SystemScheduler<'d, 'w>{
 
-    fn add<S:'w + System<'d, 'w, World>>(&mut self, system: S, name: String, dep: Vec<String>){
-        self.systems.insert(name, 
+    fn add<S:'w + System<'d, 'w, World>>(&mut self, system: S, name: &str, dep: Vec<&str>){
+        self.systems.insert(name.to_string(), 
             StoredSys{
-                dep,
+                dep: dep.iter().map(|s| s.to_string()).collect(),
                 system: Box::new(system),
             });
     }

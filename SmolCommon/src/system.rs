@@ -13,7 +13,7 @@ use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard, MappedRwLockReadGua
 use SmolCommonMacros::{impl_system_data, impl_system_data_multi};
 
 pub trait Scheduler<'d, 'w: 'd, W: WorldCommon>{
-    fn add<S:'w + System<'d, 'w, W>>(&mut self, system: S, name: String, depend: Vec<String>);
+    fn add<S:'w + System<'d, 'w, W>>(&mut self, system: S, name: &str, depend: Vec<&str>);
 
     fn run(&self, world: &'w W);
 }
