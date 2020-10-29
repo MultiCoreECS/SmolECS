@@ -172,15 +172,6 @@ impl<'d, T> SystemData<'d> for Read<'d, T>
     }
 }
 
-impl<'j, 'd: 'j, T> Joinable<'j> for &'j Read<'d, T>
-    where T: Joinable<'j> + Send + Sync + Copy + 'd{
-    type Target = <T as Joinable<'j>>::Target;
-
-    fn join(self) -> JoinIter<'j, Self::Target>{
-        self.comp.deref().join()
-    }
-}
-
 pub struct Write<'d, T: 'static + Resource>{
     comp: MappedRwLockWriteGuard<'d, T>
 }
@@ -209,15 +200,6 @@ impl<'d, T> SystemData<'d> for Write<'d, T>
 
     fn get_dep_vec<'w: 'd, W: WorldCommon>(world: &W) -> DepVec{
         world.get_dep_vec_res::<T>(AccessType::Write)
-    }
-}
-
-impl<'j, 'd: 'j, T> Joinable<'j> for &'j Write<'d, T>
-    where T: Joinable<'j> + Send + Sync + Copy + 'd{
-    type Target = <T as Joinable<'j>>::Target;
-
-    fn join(self) -> JoinIter<'j, Self::Target>{
-        self.comp.deref().join()
     }
 }
 
