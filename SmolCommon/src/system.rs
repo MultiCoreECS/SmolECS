@@ -173,7 +173,7 @@ impl<'d, T> SystemData<'d> for Read<'d, T>
 }
 
 impl<'j, 'd: 'j, T> Joinable<'j> for &'j Read<'d, T>
-    where T: Joinable<'j> + Component + 'j{
+    where T: Joinable<'j> + Send + Sync + Copy + 'd{
     type Target = <T as Joinable<'j>>::Target;
 
     fn join(self) -> JoinIter<'j, Self::Target>{
@@ -213,7 +213,7 @@ impl<'d, T> SystemData<'d> for Write<'d, T>
 }
 
 impl<'j, 'd: 'j, T> Joinable<'j> for &'j Write<'d, T>
-    where T: Joinable<'j> + Component + 'j{
+    where T: Joinable<'j> + Send + Sync + Copy + 'd{
     type Target = <T as Joinable<'j>>::Target;
 
     fn join(self) -> JoinIter<'j, Self::Target>{
