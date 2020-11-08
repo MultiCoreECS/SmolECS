@@ -1,4 +1,5 @@
 use crate::world::World;
+use crate::Entity;
 use SmolCommon::system::*;
 use SmolCommon::component::Component;
 use SmolCommon::{DepVec, BitVec};
@@ -7,6 +8,13 @@ use std::sync::{Arc, Mutex, atomic::{Ordering, AtomicBool}};
 use std::collections::HashMap;
 use rayon;
 use std::ops::Deref;
+
+use SmolCommon::component::{ComponentStorage};
+use SmolCommon::join::{Joinable, JoinIter};
+use SmolCommon::{Resource, AccessType};
+use parking_lot::{ MappedRwLockReadGuard, MappedRwLockWriteGuard};
+
+use std::ops::DerefMut;
 
 // Stores systems as a tuple of dependencies, init funcs, and run funcs
 pub struct SystemScheduler<'d, 'w: 'd>{
@@ -374,3 +382,162 @@ mod tests{
         }
     }
 }
+
+
+pub struct ReadComp<'d, T: 'static + Component>{
+    comp: MappedRwLockReadGuard<'d, ComponentStorage<T>>
+}
+
+impl<'d, T: Component> ReadComp<'d, T>{
+    pub fn get(&'d self, entity: usize) -> Option<&'d T>{
+        self.comp.get(&entity)
+    }
+}
+
+impl<'d, T> SystemData<'d> for ReadComp<'d, T>
+    where T: Component + 'static{
+    fn get_data<'w: 'd, W: WorldCommon>(world: &'w W) -> Self{
+        Self{
+            comp: world.get_comp::<T>()
+        }
+    }
+
+    fn get_dep_vec<'w: 'd, W: WorldCommon>(world: &W) -> DepVec{
+        world.get_dep_vec_comp::<T>(AccessType::Read)
+    }
+}
+
+impl<'j, 'd, T> Joinable<'j> for &'j ReadComp<'d, T>
+    where T: Component + 'j{
+    type Target = &'j T;
+
+    fn join(self) -> JoinIter<'j, Self::Target>{
+        JoinIter{
+            items: Box::new(self.comp.iter()),
+        }
+    }
+}
+
+pub struct WriteComp<'d, T: Component>{
+    comp: MappedRwLockWriteGuard<'d, dyn ComponentStorage<T>>
+}
+
+impl<'d, T: Component> WriteComp<'d, T>{
+    pub fn get(&'d self, entity: &usize) -> Option<&'d T>{
+        self.comp.get(entity)
+    }
+
+    pub fn get_mut(&'d mut self, entity: usize) -> Option<&'d mut T>{
+        self.comp.get_mut(&entity)
+    }
+
+    fn set(&mut self, entity: usize, comp: T){
+        self.comp.set(&entity, comp)
+    }
+
+    fn delete(&mut self, entity: usize){
+        self.comp.delete(&entity);
+    }
+}
+
+impl<'d, T: Component> WriteCompCommon<T, Entity> for WriteComp<'d, T>{
+    fn set(&mut self, entity: &Entity, comp: T){
+        self.comp.set(&entity.index, comp)
+    }
+
+    fn delete(&mut self, entity: &Entity){
+        self.comp.delete(&entity.index);
+    }
+}
+
+impl<'d, T> SystemData<'d> for WriteComp<'d, T>
+    where T: Component + 'static{
+    fn get_data<'w: 'd, W: WorldCommon>(world: &'w W) -> Self{
+        Self{
+            comp: world.get_comp_mut::<T>()
+        }
+    }
+
+    fn get_dep_vec<'w: 'd, W: WorldCommon>(world: &W) -> DepVec{
+        world.get_dep_vec_comp::<T>(AccessType::Write)
+    }
+}
+
+impl<'j, 'd: 'j, T> Joinable<'j> for &'j mut WriteComp<'d, T>
+    where T: Component + 'j{
+    type Target = &'j mut T;
+
+    fn join(self) -> JoinIter<'j, Self::Target>{
+        JoinIter{
+            items: Box::new(self.comp.iter_mut()),
+        }
+    }
+}
+
+impl<'j, 'd: 'j, T> Joinable<'j> for &'j WriteComp<'d, T>
+    where T: Component + 'j{
+    type Target = &'j T;
+
+    fn join(self) -> JoinIter<'j, Self::Target>{
+        JoinIter{
+            items: Box::new(self.comp.iter()),
+        }
+    }
+}
+
+pub struct Read<'d, T: 'static + Resource>{
+    comp: MappedRwLockReadGuard<'d, T>
+}
+
+impl<'d, T: Resource> Deref for Read<'d, T>{
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target{
+        self.comp.deref()
+    }
+}
+
+impl<'d, T> SystemData<'d> for Read<'d, T>
+    where T: Resource + 'static{
+    fn get_data<'w: 'd, W: WorldCommon>(world: &'w W) -> Self{
+        Self{
+            comp: world.get::<T>()
+        }
+    }
+
+    fn get_dep_vec<'w: 'd, W: WorldCommon>(world: &W) -> DepVec{
+        world.get_dep_vec_res::<T>(AccessType::Read)
+    }
+}
+
+pub struct Write<'d, T: 'static + Resource>{
+    comp: MappedRwLockWriteGuard<'d, T>
+}
+
+impl<'d, T: Resource> Deref for Write<'d, T>{
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target{
+        self.comp.deref()
+    }
+}
+
+impl<'d, T: Resource> DerefMut for Write<'d, T>{
+    fn deref_mut(&mut self) -> &mut Self::Target{
+        self.comp.deref_mut()
+    }
+}
+
+impl<'d, T> SystemData<'d> for Write<'d, T>
+    where T: Resource + 'static{
+    fn get_data<'w: 'd, W: WorldCommon>(world: &'w W) -> Self{
+        Self{
+            comp: world.get_mut::<T>()
+        }
+    }
+
+    fn get_dep_vec<'w: 'd, W: WorldCommon>(world: &W) -> DepVec{
+        world.get_dep_vec_res::<T>(AccessType::Write)
+    }
+}
+

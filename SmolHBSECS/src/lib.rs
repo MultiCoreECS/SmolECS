@@ -4,7 +4,7 @@ pub mod system;
 
 use SmolCommon::entity::*;
 use SmolCommon::component::*;
-use SmolCommon::system::WriteComp;
+use SmolCommon::system::WriteCompCommon;
 use SmolCommon::join::{JoinIter, Joinable};
 use std::collections::VecDeque;
 
@@ -16,13 +16,13 @@ pub struct Entity{
 
 impl EntityCommon for Entity{
 
-    fn add<'e, 'd: 'e, T: Component>(&'e self, storage: &'e mut WriteComp<'d, T>, comp: T) -> &'e Self{
-        storage.set(self.index, comp);
+    fn add<'e, T: Component>(&'e self, storage: &'e mut WriteCompCommon<T, Entity>, comp: T) -> &'e Self{
+        storage.set(self, comp);
         self
     }
 
-    fn remove<'e, 'd: 'e, T: Component>(&'e self, storage: &'e mut WriteComp<'d, T>) -> &'e Self{
-        storage.delete(self.index);
+    fn remove<'e, T: Component>(&'e self, storage: &'e mut WriteCompCommon<T, Entity>) -> &'e Self{
+        storage.delete(self);
         self
     }
 }

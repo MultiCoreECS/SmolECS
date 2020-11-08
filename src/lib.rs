@@ -15,9 +15,9 @@ pub mod component{
 }
 
 pub mod system{
-    pub use SmolCommon::system::{ReadComp, WriteComp, Read, Write, System, SystemData, Scheduler};
+    pub use SmolCommon::system::{System, SystemData, Scheduler};
     pub use SmolCommon::join::Joinable;
-    pub use SmolHBSECS::system::SystemScheduler;
+    pub use SmolHBSECS::system::{SystemScheduler, ReadComp, WriteComp, Read, Write};
 }
 
 pub use rayon;
